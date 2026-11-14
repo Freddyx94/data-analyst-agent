@@ -1,0 +1,50 @@
+# All settings in one place. Paths are relative to the project root,
+# so the same file works on macOS, Windows and Linux CI.
+
+paths:
+  database: data/forecast.duckdb                 # real data, git-ignored
+  fixture_database: tests/fixtures/fixture.duckdb # tiny invented data for tests and CI
+  schema_doc: docs/schema.md                      # table and column descriptions the agent reads
+  prompts_dir: prompts
+  traces_dir: traces
+  results_dir: results
+  llm_cache_dir: .cache/llm
+
+# Guardrails for the run_sql and sample_rows tools (Stage 1).
+sql:
+  max_rows: 200          # run_sql never returns more rows than this
+  timeout_seconds: 10    # a query running longer than this is cancelled
+  sample_rows: 5         # sample_rows returns at most this many rows
+  # The only tables the agent may see or query. Everything else in the file
+  # stays hidden: the raw and staging schemas, and ml.feat_daily_sales
+  # (model input, large, would confuse the agent).
+  allowed_tables:
+    - marts.fct_daily_sales
+    - marts.dim_date
+    - marts.dim_item
+    - marts.dim_store
+    - serving.forecasts
+    - ml.stockout_days
+    - results.holdout_results   # added by scripts/load_holdout_results.py
+
+# Limits for the agent loop (Stage 2).
+agent:
+  max_steps: 10          # maximum model calls per question
+  system_prompt: prompts/system_v1.md   # which prompt version the agent uses
+
+# The language model.
+llm:
+  backend: anthropic     # anthropic | ollama (added in Stage 3)
+  anthropic_model: claude-haiku-5-5   # cheapest current model; a stronger one is compared in Stage 3
+  ollama_model: ""       # chosen in Stage 3: must support tool calling
+  max_output_tokens: 16000   # upper limit for one model reply
+  # Prices in US dollars per 1 million tokens (the API bills in dollars).
+  # From the Anthropic price list, checked 2026-11-14. The Haiku price is for
+  # prompts up to 100,000 tokens; ours are far smaller.
+  prices_usd_per_million_tokens:
+    claude-haiku-5-5: {input: 0.10, output: 0.50}
+
+# Cost control for evaluation runs (Stage 3).
+evaluation:
+  max_cost_per_run_usd: 1.00   # the runner stops when a run reaches this spend
+  runs_per_setup: 3

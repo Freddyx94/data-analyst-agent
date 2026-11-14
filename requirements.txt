@@ -1,0 +1,6 @@
+# Packages are added when the stage that needs them starts.
+duckdb==1.5.6      # same version that wrote data/forecast.duckdb
+sqlglot==30.31.0   # parses SQL so run_sql can check it before running it
+PyYAML==6.0.3      # reads config.yaml
+pytest==9.2.0
+anthropic==2.8.0   # official SDK for the Anthropic API; only used in src/agent/llm.py

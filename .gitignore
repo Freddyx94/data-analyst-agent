@@ -1,0 +1,29 @@
+# Real data: the M5 dataset may not be redistributed
+data/
+
+# Secrets
+.env
+
+# Project instructions for Claude Code (kept local)
+CLAUDE.md
+
+# Fixture database: built from tests/fixtures/make_fixture.py, not stored
+tests/fixtures/*.duckdb
+
+# Traces can contain real data rows
+traces/
+
+# Cached model responses (re-created by running the evaluation)
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
