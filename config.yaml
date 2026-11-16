@@ -57,16 +57,22 @@ llm:
   anthropic_model: claude-haiku-5-5   # cheapest current model; a stronger one is compared in Stage 3
   ollama_model: ""       # chosen in Stage 3: must support tool calling
   max_output_tokens: 16000   # upper limit for one model reply
+  # Prompt caching: parts of a request that were sent recently are read from the
+  # API's cache at a tenth of the input price. It does not change what the model sees.
+  prompt_caching: true
   # Prices in US dollars per 1 million tokens (the API bills in dollars).
-  # From the Anthropic price list, checked 2026-11-14. The Haiku price is for
+  # input/output: from the Anthropic price list, checked 2026-11-14.
+  # cache_write (5-minute cache) and cache_read: checked 2026-11-16 on
+  # platform.claude.com/docs/en/about-claude/pricing. The Haiku prices are for
   # prompts up to 100,000 tokens; ours are far smaller.
   prices_usd_per_million_tokens:
-    claude-haiku-5-5: {input: 0.10, output: 0.50}
-    claude-sonnet-5-5: {input: 2.00, output: 10.00}   # the stronger model for the comparison
+    claude-haiku-5-5: {input: 0.10, output: 0.50, cache_write: 0.125, cache_read: 0.01}
+    claude-sonnet-5-5: {input: 2.00, output: 10.00, cache_write: 2.50, cache_read: 0.10}
 
 # Cost control for evaluation runs (Stage 3).
 evaluation:
-  # The runner stops when a run reaches this spend. A new run of the agent with
-  # claude-sonnet-5-5 costs about $3.35 and needs a higher limit; cached runs are free.
-  max_cost_per_run_usd: 1.00
+  # The runner stops when a run reaches this spend. Lowered to 0.20 on 2026-11-16:
+  # about $0.99 is left in the account for the rest of the project. A new run of the
+  # agent with claude-sonnet-5-5 costs about $3.35; cached runs are free.
+  max_cost_per_run_usd: 0.20
   runs_per_setup: 3

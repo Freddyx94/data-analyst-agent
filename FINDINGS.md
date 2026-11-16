@@ -1,11 +1,46 @@
 # Findings
 
-Work in progress. Every number here comes from a file in `results/`.
-So far: development questions only. The test questions have not been run, so none of these numbers is final.
+Work in progress (Stages 5 and 6 are not done). Every number here comes from a file in `results/`.
+
+## Final results (test set)
+
+24 questions that were never used to develop the agent, each asked 3 times per setup, run once on 2026-11-17. All three setups use `claude-haiku-5-5` with prompt caching.
+
+| Setup | Execution accuracy (mean) | Range over 3 runs | Cost per question | Time per question | Model calls per question |
+|---|---|---|---|---|---|
+| Baseline: one prompt with the full schema, one SQL query, no tools | 94.4% | 91.7% to 95.8% | $0.00018 | 1.5 s | 1.0 |
+| First agent (v1) | 75.0% | 75.0% to 75.0% | $0.00055 | 3.8 s | 3.6 |
+| Improved agent (v4) | 91.7% | 91.7% to 91.7% | $0.00082 | 5.1 s | 4.5 |
+
+Source: `results/summary_test.csv`, built from the three `results/eval_*_test.csv` files. Failures: `results/failure_analysis_test.csv`.
+
+**The answer to the project's question.** On these questions, an agent that can look at the data and correct itself is not more accurate than a single "question in, SQL out" prompt. It costs about 4.6 times as much per question and takes about 3.4 times as long. The changes of Stage 4 did help the agent: from 75.0% to 91.7%.
+
+**The two approaches fail differently.**
+
+| Failure type (test set, of 72 runs each) | Baseline | Agent v1 | Agent v4 |
+|---|---|---|---|
+| Final query is not the answer (the text answer is correct) | 0 | 15 | 0 |
+| Answered without running a query (the text answer is correct) | 0 | 2 | 0 |
+| Calculated a number in the text instead of in SQL (the text answer is about right) | 0 | 1 | 3 |
+| Correct answer in a format the gold does not accept (month as `2015-05`) | 0 | 0 | 3 |
+| Could not check the data (asked about an item that does not exist) | 3 | 0 | 0 |
+| Guessed a stored value (event name spelled differently) | 1 | 0 | 0 |
+| **All failures** | **4** | **18** | **6** |
+
+- The baseline fails where it would need to look at the data. It cannot see that an item does not exist, so it returns an empty result instead of saying so.
+- The improved agent never fails for that reason. All 6 of its failures are in how it hands over a correct answer: it calculated a percentage in its text instead of in its query (3 runs), and it wrote a month in a form the test question does not accept (3 runs). In all 6 failed runs the text answer is correct or, for the percentage, rounded from the correct value.
+- The month format is a gap in a test question I wrote. I did not change the test question after seeing the result: that would tune the measurement on the test set. Under the agreed rules these 3 runs are failures.
+
+**The development set overstated the gain.** The improved agent scored 99.1% on the development questions and 91.7% on the test questions. Every Stage 4 change was designed by looking at development failures, so this drop is expected; it is why the test set exists. The baseline scored 92.6% and 94.4%.
+
+**Small numbers.** With 24 questions, one question is 4.2 percentage points. The difference between the baseline and the improved agent is less than one question on average.
+
+**Cost note.** Costs on the test set include prompt caching (added after the development runs), so they are lower than the development costs below and cannot be compared with them directly.
 
 ## Results on the development set
 
-36 questions, each asked 3 times per setup.
+36 questions, each asked 3 times per setup. These questions were used to develop the agent.
 
 | Setup | Model | Execution accuracy (mean) | Range over 3 runs | Cost per question | Time per question | Model calls per question |
 |---|---|---|---|---|---|---|
@@ -68,15 +103,21 @@ Running the same evaluation twice gave different numbers: v1 moved from 75.0% to
 
 The connection now uses one thread (`src/agent/db.py`). Since then every replay gives identical numbers at no cost, and a test checks it. All Haiku numbers above were measured after the fix. The Sonnet run was measured before it; I have not run it again ($3.35).
 
+## Prompt caching (Stage 4, cost)
+
+Most of the agent's cost was input: every step sends the whole conversation again (77% of the cost of v4 on the development set). Prompt caching lets the API read a part of a request that was sent recently at a tenth of the input price. The code marks two points (`add_cache_markers` in `src/agent/llm.py`): the end of the system prompt, shared by all questions, and the end of each request, shared by the next step. It does not change what the model sees, so the agent's behaviour stays the same.
+
+In a live check on two questions, from step 2 on almost all input was read from the cache, and the two questions cost $0.0007 and $0.0009. On the test set, the improved agent cost $0.00082 per question.
+
 ## Limits of this measurement
 
-- 36 questions is a small set. One question is 2.8 percentage points, and the ranges of v3, v4 and the baseline overlap.
-- **All of Stage 4 was tuned on these development questions.** I looked at their failures to design each change, so 99.1% is an optimistic number. Only the test set can say how much of the gain is real.
+- The sets are small: 36 development and 24 test questions. One test question is 4.2 percentage points.
+- All of Stage 4 was tuned on the development questions, so the development numbers of v2 to v4 are optimistic.
 - The questions and gold queries were written for this project, by the same people who built the agent.
 - The failure types and the "text answer is correct" counts come from reading the runs by hand.
+- Only one model (`claude-haiku-5-5`) was used for the final numbers.
 
-## Not measured yet
+## Not measured
 
-- The test questions.
 - A local model (Ollama).
-- The stronger model with the improved agent.
+- The stronger model (`claude-sonnet-5-5`) with the improved agent. Left out to stay within the remaining budget.

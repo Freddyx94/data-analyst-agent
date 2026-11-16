@@ -179,6 +179,8 @@ def run_agent(
             tool_calls=[{"name": c.name, "arguments": c.arguments} for c in reply.tool_calls],
             input_tokens=reply.input_tokens,
             output_tokens=reply.output_tokens,
+            cache_read_tokens=reply.cache_read_tokens,
+            cache_write_tokens=reply.cache_write_tokens,
             cost_usd=reply.cost_usd,
             cached=reply.cached,
             seconds=model_seconds,

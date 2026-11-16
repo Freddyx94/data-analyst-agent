@@ -158,3 +158,75 @@ def test_reply_content_is_kept_as_plain_data_for_the_cache_and_the_next_call():
         {"type": "text", "text": "I will count."},
         {"type": "tool_use", "id": "toolu_1", "name": "run_sql", "input": {"sql": "SELECT 1"}},
     ]
+
+
+# --- prompt caching ---------------------------------------------------------------
+
+
+def test_cost_counts_each_kind_of_input_at_its_own_price():
+    # Haiku: input $0.10, cache write $0.125, cache read $0.01, output $0.50 per million.
+    cost = cost_usd(MODEL, 1_000_000, 1_000_000, cache_write_tokens=1_000_000, cache_read_tokens=1_000_000)
+    assert cost == pytest.approx(0.10 + 0.50 + 0.125 + 0.01)
+
+
+def test_usage_with_cache_tokens_is_parsed_and_priced():
+    response = _response([_text("ok")], input_tokens=100, output_tokens=200)
+    response.usage.cache_creation_input_tokens = 1_000
+    response.usage.cache_read_input_tokens = 10_000
+    reply = parse_anthropic_response(response, MODEL)
+    assert reply.input_tokens == 11_100  # all input, so runs with and without caching compare
+    assert (reply.cache_read_tokens, reply.cache_write_tokens) == (10_000, 1_000)
+    expected = (100 * 0.10 + 200 * 0.50 + 1_000 * 0.125 + 10_000 * 0.01) / 1_000_000
+    assert reply.cost_usd == pytest.approx(expected)
+
+
+def test_usage_without_cache_fields_still_works():
+    reply = parse_anthropic_response(_response([_text("ok")]), MODEL)  # stand-in has no cache fields
+    assert (reply.cache_read_tokens, reply.cache_write_tokens) == (0, 0)
+
+
+def test_cache_markers_for_the_agent_and_for_the_baseline():
+    from agent.llm import add_cache_markers
+
+    agent_request = {"system": "You are ...", "messages": [], "tools": [{"name": "run_sql"}]}
+    add_cache_markers(agent_request)
+    assert agent_request["system"] == [
+        {"type": "text", "text": "You are ...", "cache_control": {"type": "ephemeral"}}
+    ]
+    assert agent_request["cache_control"] == {"type": "ephemeral"}
+
+    baseline_request = {"system": "You are ...", "messages": []}
+    add_cache_markers(baseline_request)
+    assert baseline_request["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert "cache_control" not in baseline_request  # the question at the end is never re-sent
+
+
+def test_the_model_sends_cache_markers_when_caching_is_on(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-used")
+    model = AnthropicModel(MODEL)
+    sent = {}
+
+    def fake_create(**request):
+        sent.update(request)
+        return _response([_text("ok")])
+
+    monkeypatch.setattr(model._client.messages, "create", fake_create)
+    model.reply("system text", [{"role": "user", "text": "q"}], tool_schemas())
+    assert sent["system"][0]["text"] == "system text"
+    assert sent["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert sent["cache_control"] == {"type": "ephemeral"}
+
+
+def test_cache_keeps_the_cache_token_counts(tmp_path):
+    from agent.llm import CachedModel
+
+    class OneReply:
+        name = MODEL
+
+        def reply(self, system, messages, tools):
+            return ModelReply(text="ok", input_tokens=500, cache_read_tokens=400, cache_write_tokens=50)
+
+    cached = CachedModel(OneReply(), tmp_path)
+    cached.reply("s", [{"role": "user", "text": "q"}], [])
+    again = cached.reply("s", [{"role": "user", "text": "q"}], [])
+    assert again.cached and (again.cache_read_tokens, again.cache_write_tokens) == (400, 50)

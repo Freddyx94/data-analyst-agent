@@ -49,8 +49,10 @@ class ModelReply:
 
     text: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
-    input_tokens: int = 0
+    input_tokens: int = 0         # all input tokens, including those read from or written to the cache
     output_tokens: int = 0
+    cache_read_tokens: int = 0    # input tokens read from the API's prompt cache (cheap)
+    cache_write_tokens: int = 0   # input tokens written to the cache (a little dearer than normal)
     cost_usd: float = 0.0
     seconds: float = 0.0   # how long the model took to answer
     cached: bool = False   # True when the reply came from the cache: no money was spent
@@ -117,12 +119,20 @@ class FakeModel:
 # --- Anthropic backend -------------------------------------------------------
 
 
-def cost_usd(model_name: str, input_tokens: int, output_tokens: int) -> float:
+def cost_usd(
+    model_name: str,
+    input_tokens: int,
+    output_tokens: int,
+    cache_write_tokens: int = 0,
+    cache_read_tokens: int = 0,
+) -> float:
     """Cost of one call in US dollars: tokens times the price from config.yaml.
 
     A token is a piece of a word (roughly 3 to 4 characters of English). The
     API charges separately for tokens we send (input) and tokens the model
-    writes (output, which includes its thinking).
+    writes (output, which includes its thinking). With prompt caching, input
+    comes in three kinds with three prices: normal (`input_tokens` here means
+    only these), written to the cache, and read from the cache.
     """
     prices = load_config()["llm"]["prices_usd_per_million_tokens"].get(model_name)
     if prices is None:
@@ -130,7 +140,11 @@ def cost_usd(model_name: str, input_tokens: int, output_tokens: int) -> float:
             f"No price for model {model_name!r} in config.yaml "
             "(llm.prices_usd_per_million_tokens). Add it so the cost can be tracked."
         )
-    return (input_tokens * prices["input"] + output_tokens * prices["output"]) / 1_000_000
+    if (cache_write_tokens or cache_read_tokens) and not {"cache_write", "cache_read"} <= prices.keys():
+        raise ModelError(f"No cache prices for model {model_name!r} in config.yaml.")
+    total = input_tokens * prices["input"] + output_tokens * prices["output"]
+    total += cache_write_tokens * prices.get("cache_write", 0) + cache_read_tokens * prices.get("cache_read", 0)
+    return total / 1_000_000
 
 
 def to_anthropic_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -202,18 +216,42 @@ def parse_anthropic_response(response: Any, model_name: str) -> ModelReply:
         # The reply was cut off. A half-written tool request cannot be run.
         text, calls = f"{text}\n[The reply was cut off at the output token limit.]".strip(), []
 
-    input_tokens = response.usage.input_tokens
-    output_tokens = response.usage.output_tokens
+    usage = response.usage
+    uncached = usage.input_tokens  # with caching, the API counts only the uncached input here
+    written = getattr(usage, "cache_creation_input_tokens", None) or 0
+    read = getattr(usage, "cache_read_input_tokens", None) or 0
+    output_tokens = usage.output_tokens
     return ModelReply(
         text=text,
         tool_calls=calls,
-        input_tokens=input_tokens,
+        input_tokens=uncached + written + read,
         output_tokens=output_tokens,
-        cost_usd=cost_usd(model_name, input_tokens, output_tokens),
+        cache_read_tokens=read,
+        cache_write_tokens=written,
+        cost_usd=cost_usd(model_name, uncached, output_tokens, written, read),
         # Plain dicts instead of SDK objects: they can be saved in the cache and
         # sent back to the API unchanged on the next call.
         provider_content=[block.to_dict() for block in response.content],
     )
+
+
+def add_cache_markers(request: dict[str, Any]) -> None:
+    """Mark which parts of the request the API may cache.
+
+    Two markers, as the API documentation recommends for agent loops:
+    1. At the end of the system prompt. The API reads tools, then system, then
+       messages, so this covers the tool descriptions and the system prompt.
+       They are the same for every question, so all questions share this entry.
+    2. A top-level marker that the API moves to the end of each request. In the
+       agent loop, step N+1 starts with everything step N sent, so it reads
+       that from the cache. Only for the agent (it has tools): the baseline
+       sends one request per question, and its end is the question itself,
+       which is never sent again.
+    The model sees exactly the same text; only the price of reading it changes.
+    """
+    request["system"] = [{"type": "text", "text": request["system"], "cache_control": {"type": "ephemeral"}}]
+    if request.get("tools"):
+        request["cache_control"] = {"type": "ephemeral"}
 
 
 class AnthropicModel:
@@ -231,6 +269,7 @@ class AnthropicModel:
         self._anthropic = anthropic
         self._client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment
         self._max_tokens = load_config()["llm"]["max_output_tokens"]
+        self._caching = bool(load_config()["llm"].get("prompt_caching", False))
         self.name = model_name
 
     def reply(
@@ -245,6 +284,8 @@ class AnthropicModel:
         }
         if tools:  # the baseline sends no tools at all
             request["tools"] = to_anthropic_tools(tools)
+        if self._caching:
+            add_cache_markers(request)
         started = time.monotonic()
         try:
             response = self._client.messages.create(**request)
@@ -314,6 +355,8 @@ class CachedModel:
             "tool_calls": [vars(call) for call in reply.tool_calls],
             "input_tokens": reply.input_tokens,
             "output_tokens": reply.output_tokens,
+            "cache_read_tokens": reply.cache_read_tokens,
+            "cache_write_tokens": reply.cache_write_tokens,
             "cost_usd": reply.cost_usd,
             "seconds": reply.seconds,
             "provider_content": reply.provider_content,
