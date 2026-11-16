@@ -38,12 +38,17 @@ def _response(blocks, stop_reason="end_turn", input_tokens=1000, output_tokens=2
     )
 
 
+def _block(**fields):
+    """A stand-in for one block of the API's answer, with the to_dict() the real blocks have."""
+    return SimpleNamespace(**fields, to_dict=lambda: dict(fields))
+
+
 def _text(text):
-    return SimpleNamespace(type="text", text=text)
+    return _block(type="text", text=text)
 
 
 def _tool_use(call_id, name, arguments):
-    return SimpleNamespace(type="tool_use", id=call_id, name=name, input=arguments)
+    return _block(type="tool_use", id=call_id, name=name, input=arguments)
 
 
 def test_cost_is_tokens_times_price():
@@ -144,3 +149,12 @@ def test_load_env_reads_values_and_does_not_override(tmp_path, monkeypatch):
     assert os.environ["TEST_AGENT_SET"] == "from_shell"  # the environment wins
     assert "TEST_AGENT_EMPTY" not in os.environ
     monkeypatch.delenv("TEST_AGENT_NEW")
+
+
+def test_reply_content_is_kept_as_plain_data_for_the_cache_and_the_next_call():
+    response = _response([_text("I will count."), _tool_use("toolu_1", "run_sql", {"sql": "SELECT 1"})])
+    reply = parse_anthropic_response(response, MODEL)
+    assert reply.provider_content == [
+        {"type": "text", "text": "I will count."},
+        {"type": "tool_use", "id": "toolu_1", "name": "run_sql", "input": {"sql": "SELECT 1"}},
+    ]

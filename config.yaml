@@ -43,8 +43,11 @@ llm:
   # prompts up to 100,000 tokens; ours are far smaller.
   prices_usd_per_million_tokens:
     claude-haiku-5-5: {input: 0.10, output: 0.50}
+    claude-sonnet-5-5: {input: 2.00, output: 10.00}   # the stronger model for the comparison
 
 # Cost control for evaluation runs (Stage 3).
 evaluation:
-  max_cost_per_run_usd: 1.00   # the runner stops when a run reaches this spend
+  # The runner stops when a run reaches this spend. A new run of the agent with
+  # claude-sonnet-5-5 costs about $3.35 and needs a higher limit; cached runs are free.
+  max_cost_per_run_usd: 1.00
   runs_per_setup: 3

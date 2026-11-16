@@ -1,0 +1,301 @@
+# Development questions (36). We may look at failures on these and improve the agent.
+# Gold queries return only the columns that are essential for the answer.
+
+# --- simple lookup -----------------------------------------------------------
+
+- id: dev-01
+  level: lookup
+  question: How many items are in department FOODS_2?
+  gold_sql: SELECT count(*) AS items FROM marts.dim_item WHERE dept_id = 'FOODS_2'
+
+- id: dev-02
+  level: lookup
+  question: What was the price of item FOODS_3_090 on 22 May 2016?
+  gold_sql: >
+    SELECT sell_price FROM marts.fct_daily_sales
+    WHERE item_id = 'FOODS_3_090' AND date = DATE '2016-05-22'
+
+- id: dev-03
+  level: lookup
+  question: On which date was item FOODS_1_009 launched?
+  gold_sql: SELECT launch_date FROM marts.dim_item WHERE item_id = 'FOODS_1_009'
+
+- id: dev-04
+  level: lookup
+  question: Which event was on 4 July 2014?
+  gold_sql: SELECT event_name FROM marts.dim_date WHERE date = DATE '2014-07-04'
+
+# --- aggregation -------------------------------------------------------------
+
+- id: dev-05
+  level: aggregation
+  question: How many units were sold in total in 2013?
+  gold_sql: SELECT sum(units_sold) AS units FROM marts.fct_daily_sales WHERE year(date) = 2013
+
+- id: dev-06
+  level: aggregation
+  question: What was the total revenue in 2015?
+  gold_sql: >
+    SELECT sum(units_sold * sell_price) AS revenue
+    FROM marts.fct_daily_sales WHERE year(date) = 2015
+  notes: Revenue is not stored. It is units_sold * sell_price.
+
+- id: dev-07
+  level: aggregation
+  question: How many items does each department have?
+  gold_sql: SELECT dept_id, count(*) AS items FROM marts.dim_item GROUP BY dept_id
+
+- id: dev-08
+  level: aggregation
+  question: What is the highest price any item ever had?
+  gold_sql: SELECT max(sell_price) AS highest_price FROM marts.fct_daily_sales
+
+- id: dev-09
+  level: aggregation
+  question: What are the 5 best-selling items of all time by units sold, best first?
+  ordered: true
+  gold_sql: >
+    SELECT item_id FROM marts.fct_daily_sales
+    GROUP BY item_id ORDER BY sum(units_sold) DESC LIMIT 5
+
+# --- joins -------------------------------------------------------------------
+
+- id: dev-10
+  level: join
+  question: How many units did each department sell in 2015?
+  gold_sql: >
+    SELECT i.dept_id, sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_item i ON f.item_id = i.item_id
+    WHERE year(f.date) = 2015 GROUP BY i.dept_id
+
+- id: dev-11
+  level: join
+  question: How many units were sold on SNAP days in 2014?
+  gold_sql: >
+    SELECT sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.is_snap AND d.year = 2014
+
+- id: dev-12
+  level: join
+  question: How many units were sold in total on days with a sporting event?
+  gold_sql: >
+    SELECT sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.event_type = 'Sporting'
+  notes: Uses event_type as stored (the first listed event of a day).
+
+- id: dev-13
+  level: join
+  question: What was the revenue of each department in 2012?
+  gold_sql: >
+    SELECT i.dept_id, sum(f.units_sold * f.sell_price) AS revenue
+    FROM marts.fct_daily_sales f JOIN marts.dim_item i ON f.item_id = i.item_id
+    WHERE year(f.date) = 2012 GROUP BY i.dept_id
+
+- id: dev-14
+  level: join
+  question: On which weekday are the most units sold in total?
+  gold_sql: >
+    SELECT d.weekday
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    GROUP BY d.weekday ORDER BY sum(f.units_sold) DESC LIMIT 1
+
+# --- time windows ------------------------------------------------------------
+
+- id: dev-15
+  level: time_window
+  question: How many units were sold in December 2015?
+  gold_sql: >
+    SELECT sum(units_sold) AS units FROM marts.fct_daily_sales
+    WHERE date BETWEEN DATE '2015-12-01' AND DATE '2015-12-31'
+
+- id: dev-16
+  level: time_window
+  question: How many units were sold in the last 7 days of the sales data?
+  gold_sql: >
+    SELECT sum(units_sold) AS units FROM marts.fct_daily_sales
+    WHERE date BETWEEN DATE '2016-05-16' AND DATE '2016-05-22'
+  notes: The sales data ends on 2016-05-22, so the last 7 days are 16 to 22 May 2016.
+
+- id: dev-17
+  level: time_window
+  question: How many units were sold in each month of 2014?
+  gold_sql: >
+    SELECT sum(units_sold) AS units FROM marts.fct_daily_sales
+    WHERE year(date) = 2014 GROUP BY month(date)
+  notes: >
+    Gold has only the 12 unit totals. The month label is left out because it can be
+    written in many correct ways (1, January, 2014-01).
+
+- id: dev-18
+  level: time_window
+  question: What was the total revenue in the first quarter of 2016 (January to March)?
+  gold_sql: >
+    SELECT sum(units_sold * sell_price) AS revenue FROM marts.fct_daily_sales
+    WHERE date BETWEEN DATE '2016-01-01' AND DATE '2016-03-31'
+
+- id: dev-19
+  level: time_window
+  question: How many units were sold from 18 to 24 December 2014?
+  gold_sql: >
+    SELECT sum(units_sold) AS units FROM marts.fct_daily_sales
+    WHERE date BETWEEN DATE '2014-12-18' AND DATE '2014-12-24'
+
+# --- multi-step --------------------------------------------------------------
+
+- id: dev-20
+  level: multi_step
+  question: Which department had the highest growth in units sold from 2014 to 2015, in percent?
+  gold_sql: >
+    WITH y AS (
+      SELECT i.dept_id,
+             sum(f.units_sold) FILTER (WHERE year(f.date) = 2014) AS u14,
+             sum(f.units_sold) FILTER (WHERE year(f.date) = 2015) AS u15
+      FROM marts.fct_daily_sales f JOIN marts.dim_item i ON f.item_id = i.item_id
+      GROUP BY i.dept_id)
+    SELECT dept_id FROM y ORDER BY (u15 - u14) * 1.0 / u14 DESC LIMIT 1
+
+- id: dev-21
+  level: multi_step
+  question: What percentage of the units sold in 2015 came from each department?
+  gold_sql: >
+    SELECT i.dept_id, 100.0 * sum(f.units_sold) / sum(sum(f.units_sold)) OVER () AS percent
+    FROM marts.fct_daily_sales f JOIN marts.dim_item i ON f.item_id = i.item_id
+    WHERE year(f.date) = 2015 GROUP BY i.dept_id
+
+- id: dev-22
+  level: multi_step
+  question: Among the items launched before 2014, which item had the largest increase in units sold from 2014 to 2015?
+  gold_sql: >
+    SELECT f.item_id
+    FROM marts.fct_daily_sales f JOIN marts.dim_item i ON f.item_id = i.item_id
+    WHERE i.launch_date < DATE '2014-01-01' AND year(f.date) IN (2014, 2015)
+    GROUP BY f.item_id
+    ORDER BY sum(f.units_sold) FILTER (WHERE year(f.date) = 2015)
+           - sum(f.units_sold) FILTER (WHERE year(f.date) = 2014) DESC
+    LIMIT 1
+  notes: Increase in units (absolute), not in percent.
+
+- id: dev-23
+  level: multi_step
+  question: In 2015, by how many percent were the average units sold per day higher on SNAP days than on other days? Leave out the day the store was closed.
+  gold_sql: >
+    WITH daily AS (
+      SELECT d.date, d.is_snap, sum(f.units_sold) AS units
+      FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+      WHERE d.year = 2015 AND NOT d.is_store_closed
+      GROUP BY d.date, d.is_snap)
+    SELECT 100.0 * (avg(units) FILTER (WHERE is_snap) / avg(units) FILTER (WHERE NOT is_snap) - 1) AS percent_higher
+    FROM daily
+
+# --- ambiguous: any listed meaning counts as correct ---------------------------
+
+- id: dev-24
+  level: ambiguous
+  question: Which year had the best sales?
+  gold_sql:
+    - >
+      SELECT year(date) AS year FROM marts.fct_daily_sales
+      GROUP BY year(date) ORDER BY sum(units_sold) DESC LIMIT 1
+    - >
+      SELECT year(date) AS year FROM marts.fct_daily_sales
+      GROUP BY year(date) ORDER BY sum(units_sold * sell_price) DESC LIMIT 1
+  notes: >
+    Meanings accepted - most units sold (2014) or highest revenue (2015). The two
+    meanings give different years, so the agent should say which one it chose.
+
+- id: dev-25
+  level: ambiguous
+  question: How much did we sell last year?
+  gold_sql:
+    - SELECT sum(units_sold) FROM marts.fct_daily_sales WHERE year(date) = 2015
+    - SELECT sum(units_sold * sell_price) FROM marts.fct_daily_sales WHERE year(date) = 2015
+    - SELECT sum(units_sold) FROM marts.fct_daily_sales WHERE year(date) = 2016
+    - SELECT sum(units_sold * sell_price) FROM marts.fct_daily_sales WHERE year(date) = 2016
+  notes: >
+    Units or revenue. "Last year" is 2015 (the last full year) or 2016 (the last year
+    in the data, which ends in May).
+
+- id: dev-26
+  level: ambiguous
+  question: What is the average price of an item?
+  gold_sql:
+    - SELECT avg(sell_price) FROM marts.fct_daily_sales
+    - SELECT avg(p) FROM (SELECT avg(sell_price) AS p FROM marts.fct_daily_sales GROUP BY item_id)
+    - SELECT sum(units_sold * sell_price) / sum(units_sold) FROM marts.fct_daily_sales
+    - SELECT avg(sell_price) FROM marts.fct_daily_sales WHERE date = DATE '2016-05-22'
+  notes: >
+    Meanings accepted - average over all item-days, average of each item's average,
+    average price per unit sold, average of the prices on the last day.
+
+# --- unanswerable: the correct behaviour is to decline -------------------------
+
+- id: dev-27
+  level: unanswerable
+  question: How many units were returned by shoppers in 2015?
+  notes: The data has sales only, no returns.
+
+- id: dev-28
+  level: unanswerable
+  question: Which supplier delivers the most items to the store?
+  notes: The data has no suppliers.
+
+- id: dev-29
+  level: unanswerable
+  question: Were sales lower on rainy days?
+  notes: The data has no weather.
+
+- id: dev-30
+  level: unanswerable
+  question: How many units were sold in 2018?
+  notes: The sales data ends on 2016-05-22. Answering 0 would be wrong.
+
+# --- data lookup: the stored value cannot be guessed from the schema ------------
+# Event names are stored in their own spelling (Mother's day, PresidentsDay,
+# Ramadan starts). A setup that cannot look at the data has to guess it.
+
+- id: dev-31
+  level: data_lookup
+  question: How many units were sold on Mother's Day 2015?
+  gold_sql: >
+    SELECT sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.event_name = 'Mother''s day' AND d.year = 2015
+
+- id: dev-32
+  level: data_lookup
+  question: How many units were sold during the NBA Finals in 2015, from the day they started to the day they ended?
+  gold_sql: >
+    SELECT sum(units_sold) AS units FROM marts.fct_daily_sales
+    WHERE date BETWEEN (SELECT date FROM marts.dim_date WHERE event_name = 'NBAFinalsStart' AND year = 2015)
+                   AND (SELECT date FROM marts.dim_date WHERE event_name = 'NBAFinalsEnd' AND year = 2015)
+  notes: Both days are included.
+
+- id: dev-33
+  level: data_lookup
+  question: What was the total revenue on Presidents' Day 2016?
+  gold_sql: >
+    SELECT sum(f.units_sold * f.sell_price) AS revenue
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.event_name = 'PresidentsDay' AND d.year = 2016
+
+- id: dev-34
+  level: data_lookup
+  question: How many units were sold on the day Ramadan started in 2014?
+  gold_sql: >
+    SELECT sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.event_name = 'Ramadan starts' AND d.year = 2014
+
+- id: dev-35
+  level: data_lookup
+  question: On which date did Lent start in 2013?
+  gold_sql: SELECT date FROM marts.dim_date WHERE event_name = 'LentStart' AND year = 2013
+
+- id: dev-36
+  level: unanswerable
+  question: How many units of item FOODS_1_007 were sold in 2015?
+  notes: >
+    There is no item FOODS_1_007 in the data (the numbering has gaps). A query returns
+    no rows, so answering 0 would be wrong. This can only be seen by looking at the data.

@@ -68,16 +68,21 @@ def sample_rows(con: duckdb.DuckDBPyConnection, table: str, n: int = 5) -> str:
     return _format_rows(columns, cursor.fetchall())
 
 
-def run_sql(
+class SqlError(Exception):
+    """A query was rejected, failed or was cancelled. The message is written for the model."""
+
+
+def query_rows(
     con: duckdb.DuckDBPyConnection,
     sql: str,
     max_rows: int | None = None,
     timeout_seconds: float | None = None,
-) -> str:
-    """Run one SELECT query and return the result as a text table.
+) -> tuple[list[str], list[tuple[Any, ...]], bool]:
+    """Check and run one SELECT. Return (column names, rows, was the result cut?).
 
-    Only a single SELECT on the allowed tables is accepted. The result is cut
-    after a maximum number of rows, and a query that runs too long is cancelled.
+    Why separate from run_sql: the model needs text, but the evaluation needs
+    the real values to compare them with the gold result. Both go through this
+    one function, so both get the same guardrails. Raises SqlError on any problem.
     """
     settings = _settings()
     max_rows = max_rows if max_rows is not None else settings["max_rows"]
@@ -85,7 +90,7 @@ def run_sql(
 
     problem = check_sql(sql, settings["allowed_tables"])
     if problem:
-        return f"ERROR: {problem}"
+        raise SqlError(problem)
 
     # DuckDB has no timeout setting. A timer in a second thread cancels the
     # query through con.interrupt() if it is still running when time is up.
@@ -97,22 +102,40 @@ def run_sql(
         # Read one row more than the limit, only to find out if there are more.
         rows = cursor.fetchmany(max_rows + 1)
     except duckdb.InterruptException:
-        return (
-            f"ERROR: The query was cancelled because it ran longer than {timeout:g} seconds. "
+        raise SqlError(
+            f"The query was cancelled because it ran longer than {timeout:g} seconds. "
             "Make it cheaper: filter on date, aggregate, or avoid joins without a join condition."
-        )
+        ) from None
     except duckdb.Error as error:
         # For example an unknown column. The model can fix this from the message.
-        return f"ERROR: The database could not run the query. {error}"
+        raise SqlError(f"The database could not run the query. {error}") from None
     finally:
         timer.cancel()
 
-    if len(rows) > max_rows:
+    return columns, rows[:max_rows], len(rows) > max_rows
+
+
+def run_sql(
+    con: duckdb.DuckDBPyConnection,
+    sql: str,
+    max_rows: int | None = None,
+    timeout_seconds: float | None = None,
+) -> str:
+    """Run one SELECT query and return the result as a text table.
+
+    Only a single SELECT on the allowed tables is accepted. The result is cut
+    after a maximum number of rows, and a query that runs too long is cancelled.
+    """
+    try:
+        columns, rows, was_cut = query_rows(con, sql, max_rows, timeout_seconds)
+    except SqlError as error:
+        return f"ERROR: {error}"
+
+    if was_cut:
         note = (
-            f"(showing the first {max_rows} rows; the result has more. "
+            f"(showing the first {len(rows)} rows; the result has more. "
             "Aggregate, filter or add LIMIT to get a smaller result.)"
         )
-        rows = rows[:max_rows]
     else:
         note = f"({len(rows)} rows)"
     return f"{_format_rows(columns, rows)}\n{note}"

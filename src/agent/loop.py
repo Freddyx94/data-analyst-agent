@@ -37,8 +37,11 @@ class AgentResult:
     steps: int                   # number of model calls
     input_tokens: int = 0
     output_tokens: int = 0
-    cost_usd: float = 0.0
+    cost_usd: float = 0.0    # what the run costs at list price
+    spent_usd: float = 0.0   # what was really paid now (cached replies cost nothing)
+    seconds: float = 0.0     # model time plus tool time
     sql_queries: list[str] = field(default_factory=list)  # every SQL the agent ran
+    final_sql: str | None = None  # the last SQL that ran without error: the agent's final result
     trace_path: Path | None = None
 
 
@@ -82,6 +85,10 @@ def run_agent(
         result.input_tokens += reply.input_tokens
         result.output_tokens += reply.output_tokens
         result.cost_usd += reply.cost_usd
+        result.spent_usd += 0.0 if reply.cached else reply.cost_usd
+        # A cached reply returns at once; use the time the model took originally.
+        model_seconds = reply.seconds or round(time.monotonic() - started, 3)
+        result.seconds += model_seconds
         tracer.log(
             "model_reply",
             step=step,
@@ -90,7 +97,8 @@ def run_agent(
             input_tokens=reply.input_tokens,
             output_tokens=reply.output_tokens,
             cost_usd=reply.cost_usd,
-            seconds=round(time.monotonic() - started, 3),
+            cached=reply.cached,
+            seconds=model_seconds,
         )
         messages.append({"role": "assistant", "reply": reply})
 
@@ -107,13 +115,17 @@ def run_agent(
             content = execute_tool(con, call.name, call.arguments)
             if call.name == "run_sql" and "sql" in call.arguments:
                 result.sql_queries.append(str(call.arguments["sql"]))
+                if not content.startswith("ERROR"):
+                    result.final_sql = str(call.arguments["sql"])
+            tool_seconds = round(time.monotonic() - started, 3)
+            result.seconds += tool_seconds
             tracer.log(
                 "tool_result",
                 step=step,
                 name=call.name,
                 arguments=call.arguments,
                 result=content,
-                seconds=round(time.monotonic() - started, 3),
+                seconds=tool_seconds,
             )
             results.append(ToolResult(call_id=call.id, name=call.name, content=content))
         messages.append({"role": "tool_results", "results": results})
@@ -131,5 +143,6 @@ def run_agent(
         input_tokens=result.input_tokens,
         output_tokens=result.output_tokens,
         cost_usd=result.cost_usd,
+        final_sql=result.final_sql,
     )
     return result

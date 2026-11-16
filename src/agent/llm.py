@@ -14,8 +14,10 @@ Each backend translates this into the format its API wants.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -50,6 +52,8 @@ class ModelReply:
     input_tokens: int = 0
     output_tokens: int = 0
     cost_usd: float = 0.0
+    seconds: float = 0.0   # how long the model took to answer
+    cached: bool = False   # True when the reply came from the cache: no money was spent
     # The reply exactly as the provider sent it. Some APIs want it sent back
     # unchanged on the next call, so the backend keeps it here.
     provider_content: Any = None
@@ -206,7 +210,9 @@ def parse_anthropic_response(response: Any, model_name: str) -> ModelReply:
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         cost_usd=cost_usd(model_name, input_tokens, output_tokens),
-        provider_content=response.content,
+        # Plain dicts instead of SDK objects: they can be saved in the cache and
+        # sent back to the API unchanged on the next call.
+        provider_content=[block.to_dict() for block in response.content],
     )
 
 
@@ -231,14 +237,17 @@ class AnthropicModel:
         self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
     ) -> ModelReply:
         anthropic = self._anthropic
+        request: dict[str, Any] = {
+            "model": self.name,
+            "max_tokens": self._max_tokens,
+            "system": system,
+            "messages": to_anthropic_messages(messages),
+        }
+        if tools:  # the baseline sends no tools at all
+            request["tools"] = to_anthropic_tools(tools)
+        started = time.monotonic()
         try:
-            response = self._client.messages.create(
-                model=self.name,
-                max_tokens=self._max_tokens,
-                system=system,
-                tools=to_anthropic_tools(tools),
-                messages=to_anthropic_messages(messages),
-            )
+            response = self._client.messages.create(**request)
         # Most specific error first. The SDK already retried rate limits and
         # server errors twice before we get here.
         except anthropic.AuthenticationError as error:
@@ -253,13 +262,78 @@ class AnthropicModel:
             raise ModelError(f"The API returned an error ({error.status_code}): {error.message}") from error
         except anthropic.APIConnectionError as error:
             raise ModelError("Could not reach the API. Check the internet connection.") from error
-        return parse_anthropic_response(response, self.name)
+        reply = parse_anthropic_response(response, self.name)
+        reply.seconds = round(time.monotonic() - started, 3)
+        return reply
 
 
-def make_model() -> Model:
-    """Create the model that config.yaml asks for."""
+def make_model(model_name: str | None = None) -> Model:
+    """Create the model that config.yaml asks for (or another model of the same backend)."""
     settings = load_config()["llm"]
     backend = settings["backend"]
     if backend == "anthropic":
-        return AnthropicModel(settings["anthropic_model"])
+        return AnthropicModel(model_name or settings["anthropic_model"])
     raise ModelError(f"Backend {backend!r} is not available yet. Use 'anthropic' (Ollama comes in Stage 3).")
+
+
+# --- cache -------------------------------------------------------------------
+
+
+class CachedModel:
+    """Wraps a model and remembers its replies on disk.
+
+    Why: an evaluation sends the same requests again and again while we work on
+    the metric or the report. Each reply is stored under a fingerprint (a hash)
+    of everything that was sent. The same request later gets the stored reply:
+    no waiting, no cost.
+
+    `salt` is extra text mixed into the fingerprint. The evaluation uses the
+    run number, so run 1, 2 and 3 are three different samples of the model, and
+    each of them is replayed exactly when the evaluation is run again.
+    """
+
+    def __init__(self, model: Model, cache_dir: Path | str, salt: str = "") -> None:
+        self._model = model
+        self._dir = Path(cache_dir)
+        self._dir.mkdir(parents=True, exist_ok=True)
+        self._salt = salt
+        self.name = model.name
+
+    def reply(
+        self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
+    ) -> ModelReply:
+        path = self._dir / f"{self._fingerprint(system, messages, tools)}.json"
+        if path.exists():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["tool_calls"] = [ToolCall(**call) for call in data["tool_calls"]]
+            return ModelReply(**data, cached=True)
+
+        reply = self._model.reply(system, messages, tools)
+        data = {
+            "text": reply.text,
+            "tool_calls": [vars(call) for call in reply.tool_calls],
+            "input_tokens": reply.input_tokens,
+            "output_tokens": reply.output_tokens,
+            "cost_usd": reply.cost_usd,
+            "seconds": reply.seconds,
+            "provider_content": reply.provider_content,
+        }
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        return reply
+
+    def _fingerprint(
+        self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
+    ) -> str:
+        """A short code that changes when anything in the request changes."""
+        simple: list[Any] = []
+        for message in messages:
+            if message["role"] == "user":
+                simple.append(["user", message["text"]])
+            elif message["role"] == "assistant":
+                reply = message["reply"]
+                simple.append(["assistant", reply.text, [[c.id, c.name, c.arguments] for c in reply.tool_calls]])
+            else:
+                simple.append(["tool_results", [[r.call_id, r.content] for r in message["results"]]])
+        request = {"model": self.name, "salt": self._salt, "system": system, "tools": tools, "messages": simple}
+        text = json.dumps(request, sort_keys=True, ensure_ascii=False, default=str)
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()

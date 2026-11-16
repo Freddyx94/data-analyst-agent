@@ -1,0 +1,198 @@
+# Test questions (24). Run only for final numbers. Never use failures on these
+# to change a prompt, a description or the agent.
+
+# --- simple lookup -----------------------------------------------------------
+
+- id: test-01
+  level: lookup
+  question: What is the RMSSE of the ets model?
+  gold_sql: SELECT rmsse FROM results.holdout_results WHERE model = 'ets'
+
+- id: test-02
+  level: lookup
+  question: How many units of item FOODS_3_586 were sold on 24 December 2015?
+  gold_sql: >
+    SELECT units_sold FROM marts.fct_daily_sales
+    WHERE item_id = 'FOODS_3_586' AND date = DATE '2015-12-24'
+
+- id: test-03
+  level: lookup
+  question: In which state is the store?
+  gold_sql: SELECT state_id FROM marts.dim_store
+
+# --- aggregation -------------------------------------------------------------
+
+- id: test-04
+  level: aggregation
+  question: Which 3 items have the highest total forecast, highest first?
+  ordered: true
+  gold_sql: >
+    SELECT item_id FROM serving.forecasts
+    GROUP BY item_id ORDER BY sum(forecast) DESC LIMIT 3
+
+- id: test-05
+  level: aggregation
+  question: What is the total forecast in units for the whole forecast period?
+  gold_sql: SELECT sum(forecast) AS total_forecast FROM serving.forecasts
+
+- id: test-06
+  level: aggregation
+  question: How many likely-stockout days are flagged for item FOODS_3_736?
+  gold_sql: SELECT count(*) AS days FROM ml.stockout_days WHERE item_id = 'FOODS_3_736'
+
+- id: test-07
+  level: aggregation
+  question: What are the lowest and the highest RMSSE among the forecast models?
+  gold_sql: SELECT min(rmsse) AS lowest, max(rmsse) AS highest FROM results.holdout_results
+
+# --- joins -------------------------------------------------------------------
+
+- id: test-08
+  level: join
+  question: What is the total forecast for each department?
+  gold_sql: >
+    SELECT i.dept_id, sum(f.forecast) AS total_forecast
+    FROM serving.forecasts f JOIN marts.dim_item i ON f.item_id = i.item_id
+    GROUP BY i.dept_id
+
+- id: test-09
+  level: join
+  question: How many units were sold on event days, for each event type?
+  gold_sql: >
+    SELECT d.event_type, sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.is_event GROUP BY d.event_type
+  notes: Uses event_type as stored (the first listed event of a day).
+
+- id: test-10
+  level: join
+  question: How many likely-stockout days does each department have?
+  gold_sql: >
+    SELECT i.dept_id, count(*) AS days
+    FROM ml.stockout_days s JOIN marts.dim_item i ON s.item_id = i.item_id
+    GROUP BY i.dept_id
+
+- id: test-11
+  level: join
+  question: What was the average item price in each department on 22 May 2016?
+  gold_sql: >
+    SELECT i.dept_id, avg(f.sell_price) AS average_price
+    FROM marts.fct_daily_sales f JOIN marts.dim_item i ON f.item_id = i.item_id
+    WHERE f.date = DATE '2016-05-22' GROUP BY i.dept_id
+
+# --- time windows ------------------------------------------------------------
+
+- id: test-12
+  level: time_window
+  question: How many units were sold in the last 28 days of the sales data?
+  gold_sql: >
+    SELECT sum(units_sold) AS units FROM marts.fct_daily_sales
+    WHERE date BETWEEN DATE '2016-04-25' AND DATE '2016-05-22'
+  notes: The sales data ends on 2016-05-22, so the last 28 days start on 2016-04-25.
+
+- id: test-13
+  level: time_window
+  question: How many units were sold in each year?
+  gold_sql: >
+    SELECT year(date) AS year, sum(units_sold) AS units
+    FROM marts.fct_daily_sales GROUP BY year(date)
+
+- id: test-14
+  level: time_window
+  question: What was the total revenue in the second half of 2013 (July to December)?
+  gold_sql: >
+    SELECT sum(units_sold * sell_price) AS revenue FROM marts.fct_daily_sales
+    WHERE date BETWEEN DATE '2013-07-01' AND DATE '2013-12-31'
+
+# --- multi-step --------------------------------------------------------------
+
+- id: test-15
+  level: multi_step
+  question: Which month of 2015 had the highest revenue?
+  gold_sql:
+    - >
+      SELECT month(date) AS month FROM marts.fct_daily_sales
+      WHERE year(date) = 2015 GROUP BY month(date)
+      ORDER BY sum(units_sold * sell_price) DESC LIMIT 1
+    - >
+      SELECT monthname(date) AS month FROM marts.fct_daily_sales
+      WHERE year(date) = 2015 GROUP BY monthname(date)
+      ORDER BY sum(units_sold * sell_price) DESC LIMIT 1
+  notes: Not ambiguous in meaning. Two golds only because the month can be a number or a name.
+
+- id: test-16
+  level: multi_step
+  question: Of the items that have sales rows in both 2014 and 2015, how many sold more units in 2015 than in 2014?
+  gold_sql: >
+    WITH y AS (
+      SELECT item_id,
+             sum(units_sold) FILTER (WHERE year(date) = 2014) AS u14,
+             sum(units_sold) FILTER (WHERE year(date) = 2015) AS u15
+      FROM marts.fct_daily_sales WHERE year(date) IN (2014, 2015)
+      GROUP BY item_id)
+    SELECT count(*) AS items FROM y WHERE u14 IS NOT NULL AND u15 IS NOT NULL AND u15 > u14
+
+- id: test-17
+  level: multi_step
+  question: By how many percent is the total forecast for the 28 forecast days higher or lower than the units sold in the last 28 days of the sales data?
+  gold_sql: >
+    SELECT 100.0 * ((SELECT sum(forecast) FROM serving.forecasts)
+      / (SELECT sum(units_sold) FROM marts.fct_daily_sales
+         WHERE date BETWEEN DATE '2016-04-25' AND DATE '2016-05-22') - 1) AS percent_difference
+  notes: The forecast is higher, so the difference is positive.
+
+# --- ambiguous ---------------------------------------------------------------
+
+- id: test-18
+  level: ambiguous
+  question: Which item is the most popular?
+  gold_sql:
+    - >
+      SELECT item_id FROM marts.fct_daily_sales
+      GROUP BY item_id ORDER BY sum(units_sold) DESC LIMIT 1
+    - >
+      SELECT item_id FROM marts.fct_daily_sales
+      GROUP BY item_id ORDER BY sum(units_sold * sell_price) DESC LIMIT 1
+  notes: Meanings accepted - most units sold, highest revenue.
+
+# --- unanswerable ------------------------------------------------------------
+
+- id: test-19
+  level: unanswerable
+  question: How many employees worked in the store in 2014?
+  notes: The data has no employees.
+
+- id: test-20
+  level: unanswerable
+  question: What is the product name of item FOODS_3_090?
+  notes: The data has item identifiers only, no product names.
+
+# --- data lookup: the stored value cannot be guessed from the schema ------------
+
+- id: test-21
+  level: data_lookup
+  question: How many units were sold on Martin Luther King Day 2015?
+  gold_sql: >
+    SELECT sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.event_name = 'MartinLutherKingDay' AND d.year = 2015
+
+- id: test-22
+  level: data_lookup
+  question: How many units were sold on Eid al-Fitr in 2013?
+  gold_sql: >
+    SELECT sum(f.units_sold) AS units
+    FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date
+    WHERE d.event_name = 'Eid al-Fitr' AND d.year = 2013
+
+- id: test-23
+  level: data_lookup
+  question: On which date was the Super Bowl in 2014?
+  gold_sql: SELECT date FROM marts.dim_date WHERE event_name = 'SuperBowl' AND year = 2014
+
+- id: test-24
+  level: unanswerable
+  question: What was the price of item FOODS_2_400 on 1 March 2015?
+  notes: >
+    There is no item FOODS_2_400 in the data. A query returns no rows. This can only
+    be seen by looking at the data.
