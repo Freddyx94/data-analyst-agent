@@ -1,4 +1,7 @@
 setup,model,prompt,questions,runs,accuracy_mean,accuracy_range,cost_per_question_usd,seconds_per_question,steps_per_question
-agent,claude-haiku-5-5,prompts/system_v1.md,36,3,75.0%,72.2% to 77.8%,0.00140,4.7,3.8
-agent,claude-sonnet-5-5,prompts/system_v1.md,36,3,88.0%,86.1% to 91.7%,0.03100,7.6,4.5
+agent-v1,claude-haiku-5-5,prompts/system_v1.md,36,3,75.9%,72.2% to 77.8%,0.00140,4.7,3.8
+agent-v1,claude-sonnet-5-5,prompts/system_v1.md,36,3,88.0%,86.1% to 91.7%,0.03100,7.6,4.5
+agent-v2,claude-haiku-5-5,prompts/system_v2.md,36,3,80.6%,72.2% to 86.1%,0.00165,4.8,3.7
+agent-v3,claude-haiku-5-5,prompts/system_v2.md,36,3,96.3%,91.7% to 100.0%,0.00209,5.8,4.4
+agent-v4,claude-haiku-5-5,prompts/system_v3.md,36,3,99.1%,97.2% to 100.0%,0.00207,5.8,4.3
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,36,3,92.6%,91.7% to 94.4%,0.00048,1.9,1.0

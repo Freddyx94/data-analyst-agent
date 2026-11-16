@@ -30,7 +30,26 @@ sql:
 # Limits for the agent loop (Stage 2).
 agent:
   max_steps: 10          # maximum model calls per question
-  system_prompt: prompts/system_v1.md   # which prompt version the agent uses
+  # The agent exists in named variants, so an old one can always be run again
+  # and compared. `variant` is the one the chat and the evaluation use by default.
+  variant: v4
+  variants:
+    v1:   # the first agent, as measured in Stage 3
+      system_prompt: prompts/system_v1.md
+      submit_answer_tool: false   # final result = the last query that ran without error
+    v2:   # Stage 4, change 1: the agent hands in its final query itself
+      system_prompt: prompts/system_v2.md
+      submit_answer_tool: true
+    v3:   # Stage 4, change 2: v2 plus a check when the answer is handed in
+      system_prompt: prompts/system_v2.md
+      submit_answer_tool: true
+      check_submission: true   # query required unless declining; multi-row results confirmed once
+    v4:   # Stage 4, change 3: v3 with `sql` required in the tool schema and robust query matching
+      system_prompt: prompts/system_v3.md
+      submit_answer_tool: true
+      check_submission: true
+      submit_sql_required: true   # the schema requires `sql`; an empty string means "decline"
+      sql_match: parsed           # compare queries by their parsed form, not by their text
 
 # The language model.
 llm:

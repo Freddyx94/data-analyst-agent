@@ -95,13 +95,62 @@ TOOLS: list[ToolSpec] = [
 
 _BY_NAME = {spec.name: spec for spec in TOOLS}
 
+# submit_answer is different from the tools above: it does not touch the
+# database. It is how the agent hands in its result, and the loop handles it.
+SUBMIT_TOOL = "submit_answer"
+SUBMIT_SCHEMA: dict[str, Any] = {
+    "name": SUBMIT_TOOL,
+    "description": (
+        "Hand in your final answer. Call this once, as your last step; it ends the task. "
+        "`sql` is the one query whose result IS the answer: only the rows and columns the "
+        "question asks for. If the question asks for one thing (which department, how many "
+        "units, on which date), that query returns exactly one row. Do not submit a "
+        "breakdown, a top-N list or a check query from which the answer has to be picked: "
+        "if your last query returned more than the answer, first run a narrower query with "
+        "run_sql, then submit that one. You must already have run the query with run_sql "
+        "and seen its result. Leave `sql` out only when the data cannot answer the question."
+    ),
+    "parameters": _schema(
+        {
+            "answer": {"type": "string", "description": "The answer for the user, in plain language."},
+            "sql": {"type": "string", "description": "The final query, exactly as you ran it with run_sql."},
+        },
+        ["answer"],
+    ),
+}
 
-def tool_schemas() -> list[dict[str, Any]]:
+
+# The same tool with `sql` required (variant v4). Why: models often leave out an
+# optional input, and an error message afterwards did not change that. A
+# required input is part of the schema, which models follow far more reliably.
+SUBMIT_SCHEMA_SQL_REQUIRED: dict[str, Any] = {
+    "name": SUBMIT_TOOL,
+    "description": SUBMIT_SCHEMA["description"].replace(
+        "Leave `sql` out only when the data cannot answer the question.",
+        "Set `sql` to an empty string only when the data cannot answer the question.",
+    ),
+    "parameters": _schema(
+        {
+            "answer": {"type": "string", "description": "The answer for the user, in plain language."},
+            "sql": {
+                "type": "string",
+                "description": "The final query, exactly as you ran it with run_sql. An empty string only for a decline.",
+            },
+        },
+        ["answer", "sql"],
+    ),
+}
+
+
+def tool_schemas(include_submit: bool = False, sql_required: bool = False) -> list[dict[str, Any]]:
     """The tool list in neutral form. Each model backend converts it to its API's format."""
-    return [
+    schemas = [
         {"name": spec.name, "description": spec.description, "parameters": spec.parameters}
         for spec in TOOLS
     ]
+    if not include_submit:
+        return schemas
+    return schemas + [SUBMIT_SCHEMA_SQL_REQUIRED if sql_required else SUBMIT_SCHEMA]
 
 
 def execute_tool(con: duckdb.DuckDBPyConnection, name: str, arguments: dict[str, Any]) -> str:

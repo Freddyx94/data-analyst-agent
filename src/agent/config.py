@@ -46,3 +46,16 @@ def load_env(path: Path | str | None = None) -> None:
         value = value.strip().strip("'\"")
         if value:
             os.environ.setdefault(name.strip(), value)
+
+
+def agent_settings(variant: str | None = None) -> dict[str, Any]:
+    """The settings of one agent variant (prompt file, tools), plus its name.
+
+    Why variants: when we change the agent we must still be able to run the old
+    one exactly as it was, otherwise "before" and "after" cannot be compared.
+    """
+    agent = load_config()["agent"]
+    name = variant or agent["variant"]
+    if name not in agent["variants"]:
+        raise ValueError(f"Unknown agent variant {name!r}. Known: {list(agent['variants'])}")
+    return {"name": name, "max_steps": agent["max_steps"], **agent["variants"][name]}

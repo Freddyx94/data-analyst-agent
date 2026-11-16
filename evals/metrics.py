@@ -23,6 +23,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
+from agent.answers import is_decline  # the same rule the agent loop uses
+
 Row = tuple[Any, ...]
 
 ROUNDING_TOLERANCE = 0.005  # a rounded number may differ from the exact one by 0.5%
@@ -155,12 +157,6 @@ def _sort_key(value: Any) -> tuple[int, Any]:
     if isinstance(value, (int, float)):
         return (2, value)
     return (3, value)
-
-
-def is_decline(answer: str) -> bool:
-    """Did the agent say it cannot answer? The system prompt asks for this exact phrase."""
-    text = answer.lower().replace("’", "'")  # treat a curly apostrophe like a straight one
-    return "can't answer" in text or "cannot answer" in text
 
 
 def is_correct(

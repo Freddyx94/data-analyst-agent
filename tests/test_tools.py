@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from agent.config import load_config
 from agent.schema_doc import load_schema_doc
-from agent.tools import describe_table, list_tables, sample_rows
+from agent.tools import describe_table, list_tables, run_sql, sample_rows
 
 
 def test_list_tables_shows_only_allowed_tables(con):
@@ -60,3 +60,13 @@ def test_schema_doc_describes_every_allowed_table_and_column(con):
         ).fetchall()
         for (column,) in columns:
             assert docs[table].columns.get(column), f"{table}.{column} has no description"
+
+
+def test_same_query_gives_the_same_result_text_every_time(con):
+    """Without a fixed order, tool results change between runs and the cache misses."""
+    unordered = (
+        "SELECT f.item_id, f.date, sum(f.units_sold) AS units "
+        "FROM marts.fct_daily_sales f GROUP BY f.item_id, f.date"
+    )
+    assert len({run_sql(con, unordered) for _ in range(10)}) == 1
+    assert con.execute("SELECT current_setting('threads')").fetchone()[0] == 1

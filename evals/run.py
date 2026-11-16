@@ -2,11 +2,13 @@
 
     python -m evals.run --setup baseline
     python -m evals.run --setup agent
+    python -m evals.run --setup agent --variant v1
     python -m evals.run --setup agent --model claude-sonnet-5-5
 
 Each question is asked `runs` times (config.yaml: evaluation.runs_per_setup),
 because a model does not give the same answer every time. One row per question
-and run goes to results/eval_<setup>_<model>_<split>.csv.
+and run goes to results/eval_<setup>_<model>_<split>.csv (for the agent, <setup> is
+agent-<variant>, so each variant keeps its own file).
 
 Model replies are cached, so running the same command again costs nothing.
 The run stops when the money really spent reaches evaluation.max_cost_per_run_usd.
@@ -24,7 +26,7 @@ from typing import Any
 
 import duckdb
 
-from agent.config import load_config, project_path
+from agent.config import agent_settings, load_config, project_path
 from agent.db import connect
 from agent.llm import CachedModel, Model, ModelError, make_model
 from agent.tools import SqlError, query_rows
@@ -103,11 +105,12 @@ def score(
 def evaluate(
     setup: str, model: Model, split: str, runs: int, con: duckdb.DuckDBPyConnection,
     budget_usd: float, cache_dir: Path | None, trace_dir: Path | None = None,
+    variant: str | None = None,
 ) -> tuple[list[ResultRow], float, bool]:
     """Run every question `runs` times. Return (rows, money spent, stopped early?)."""
     questions = load_questions(split)
     gold = {q.id: [fetch_rows(con, sql) for sql in q.gold_sql] for q in questions}
-    prompt = BASELINE_PROMPT if setup == "baseline" else load_config()["agent"]["system_prompt"]
+    prompt = BASELINE_PROMPT if setup == "baseline" else agent_settings(variant)["system_prompt"]
 
     rows: list[ResultRow] = []
     spent = 0.0
@@ -125,12 +128,13 @@ def evaluate(
                     path = trace_dir / f"run{run}_{question.id}.jsonl"
                     path.unlink(missing_ok=True)  # replace the trace of an earlier evaluation
                     tracer = Tracer(path)
-                outcome = run_agent_setup(question.question, run_model, con, tracer)
+                outcome = run_agent_setup(question.question, run_model, con, tracer, variant)
             spent += outcome.spent_usd
             correct, failure_type = score(question, outcome, gold[question.id], con)
             rows.append(
                 ResultRow(
-                    setup=setup, model=model.name, prompt=prompt, split=split, run=run,
+                    setup=f"agent-{agent_settings(variant)['name']}" if setup == "agent" else setup,
+                    model=model.name, prompt=prompt, split=split, run=run,
                     question_id=question.id, level=question.level, correct=correct,
                     failure_type=failure_type, steps=outcome.steps,
                     input_tokens=outcome.input_tokens, output_tokens=outcome.output_tokens,
@@ -208,6 +212,7 @@ def main() -> None:
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
     parser.add_argument("--model", default=None, help="model name; default is the one in config.yaml")
     parser.add_argument("--runs", type=int, default=None)
+    parser.add_argument("--variant", default=None, help="agent variant from config.yaml (v1, v2, ...); default is agent.variant")
     parser.add_argument("--final", action="store_true", help="required to run the test questions")
     args = parser.parse_args()
 
@@ -223,7 +228,10 @@ def main() -> None:
         print(f"Cannot start: {error}")
         return
 
-    name = f"{args.setup}_{model.name}_{args.split}"
+    # The agent's variant is part of the name, so results of an older variant are kept.
+    variant = agent_settings(args.variant)["name"] if args.setup == "agent" else None
+    setup_name = f"agent-{variant}" if variant else args.setup
+    name = f"{setup_name}_{model.name}_{args.split}"
     con = connect()
     print(f"Evaluating {name}: {runs} runs, spending limit ${budget:.2f}")
     try:
@@ -231,6 +239,7 @@ def main() -> None:
             args.setup, model, args.split, runs, con, budget,
             cache_dir=project_path(config["paths"]["llm_cache_dir"]),
             trace_dir=project_path(config["paths"]["traces_dir"]) / "eval" / name,
+            variant=variant,
         )
     except ModelError as error:
         # Replies so far are in the cache, so running again continues from here for free.

@@ -122,9 +122,10 @@ def test_trace_file_records_every_step(con, tmp_path):
 
 
 def test_system_prompt_contains_the_rules_and_the_notes_about_the_data():
-    prompt = build_system_prompt()
-    assert "I can't answer that from this data" in prompt
-    assert "2016-05-22" in prompt  # from the general notes in docs/schema.md
+    for variant in ("v1", "v2"):
+        prompt = build_system_prompt(variant)
+        assert "I can't answer that from this data" in prompt
+        assert "2016-05-22" in prompt  # from the general notes in docs/schema.md
 
 
 def test_tool_descriptions_match_the_python_functions():
@@ -135,3 +136,178 @@ def test_tool_descriptions_match_the_python_functions():
         assert set(spec.parameters["required"]) <= properties
         function_inputs = set(inspect.signature(spec.function).parameters) - {"con"}
         assert properties <= function_inputs, f"{spec.name}: schema has inputs the function lacks"
+
+
+# --- variant v2: the agent hands in its result with submit_answer ---------------
+
+BREAKDOWN = "SELECT dept_id, count(*) AS items FROM marts.dim_item GROUP BY dept_id"
+NARROW = "SELECT count(*) AS items FROM marts.dim_item WHERE dept_id = 'FOODS_3'"
+
+
+def _submit(answer: str, sql: str | None = None) -> ModelReply:
+    arguments = {"answer": answer} if sql is None else {"answer": answer, "sql": sql}
+    return ModelReply(tool_calls=[ToolCall(id="submit", name="submit_answer", arguments=arguments)])
+
+
+def test_v1_sends_only_the_four_database_tools(con):
+    model = FakeModel([ModelReply(text="done")])
+    run_agent("q", model, con, variant="v1")
+    assert [t["name"] for t in model.calls[0]["tools"]] == ["list_tables", "describe_table", "sample_rows", "run_sql"]
+
+
+def test_v2_also_offers_submit_answer_and_uses_prompt_v2(con):
+    model = FakeModel([ModelReply(text="done")])
+    run_agent("q", model, con, variant="v2")
+    assert [t["name"] for t in model.calls[0]["tools"]][-1] == "submit_answer"
+    assert "submit_answer" in model.calls[0]["system"]
+    assert "submit_answer" not in build_system_prompt("v1")
+
+
+def test_submitted_query_is_the_final_result_not_the_last_query(con):
+    """The agent runs the narrow query, then a breakdown, and hands in the narrow one."""
+    model = FakeModel([_call("run_sql", sql=NARROW), _call("run_sql", sql=BREAKDOWN), _submit("2 items.", NARROW)])
+    result = run_agent("How many items are in FOODS_3?", model, con, variant="v2")
+    assert result.stopped == "answer" and result.submitted
+    assert result.answer == "2 items."
+    assert result.final_sql == NARROW
+    assert result.steps == 3
+    assert len(model.calls) == 3  # the model is not called again after an accepted submission
+
+
+def test_submitting_a_query_that_was_never_run_is_rejected(con):
+    model = FakeModel([_submit("2 items.", NARROW), _call("run_sql", sql=NARROW), _submit("2 items.", NARROW)])
+    result = run_agent("How many items are in FOODS_3?", model, con, variant="v2")
+    rejection = model.calls[1]["messages"][-1]["results"][0].content
+    assert rejection.startswith("ERROR") and "run_sql" in rejection
+    assert result.submitted and result.final_sql == NARROW and result.steps == 3
+
+
+def test_submitting_a_query_that_failed_is_rejected(con):
+    bad = "SELECT nope FROM marts.dim_item"
+    model = FakeModel([_call("run_sql", sql=bad), _submit("…", bad), ModelReply(text="I give up.")])
+    result = run_agent("q", model, con, variant="v2")
+    assert not result.submitted
+    assert model.calls[2]["messages"][-1]["results"][0].content.startswith("ERROR")
+
+
+def test_spaces_and_a_final_semicolon_do_not_matter_when_submitting(con):
+    model = FakeModel([_call("run_sql", sql=NARROW), _submit("2 items.", "  " + NARROW.replace(" FROM", "\n FROM") + " ; ")])
+    assert run_agent("q", model, con, variant="v2").submitted
+
+
+def test_a_decline_is_submitted_without_a_query(con):
+    model = FakeModel([_call("list_tables"), _submit("I can't answer that from this data. There are no returns.")])
+    result = run_agent("How many returns?", model, con, variant="v2")
+    assert result.submitted and result.final_sql is None
+    assert result.answer.startswith("I can't answer")
+
+
+def test_submission_without_answer_text_is_rejected(con):
+    model = FakeModel([_call("run_sql", sql=NARROW), _submit("", NARROW), ModelReply(text="2 items.")])
+    result = run_agent("q", model, con, variant="v2")
+    assert not result.submitted
+    assert result.final_sql == NARROW  # fallback: the last query that worked
+
+
+def test_text_only_answer_still_ends_the_run_with_the_old_fallback(con):
+    model = FakeModel([_call("run_sql", sql=NARROW), _call("run_sql", sql=BREAKDOWN), ModelReply(text="2 items.")])
+    result = run_agent("q", model, con, variant="v2")
+    assert result.stopped == "answer" and not result.submitted
+    assert result.final_sql == BREAKDOWN
+
+
+def test_in_v1_submit_answer_is_just_an_unknown_tool(con):
+    model = FakeModel([_submit("2 items."), ModelReply(text="2 items.")])
+    result = run_agent("q", model, con, variant="v1")
+    assert not result.submitted
+    assert model.calls[1]["messages"][-1]["results"][0].content.startswith("ERROR: Unknown tool")
+
+
+# --- variant v3: the hand-in check ------------------------------------------------
+
+
+def test_row_count_is_read_from_the_run_sql_text():
+    from agent.answers import row_count
+
+    assert row_count("n\n4\n(1 rows)") == 1
+    assert row_count("a | b\n1 | 2\n3 | 4\n(2 rows)") == 2
+    assert row_count("x\n1\n(showing the first 200 rows; the result has more. Aggregate ...)") == 201
+    assert row_count("ERROR: The database could not run the query.") is None
+    assert row_count("") is None
+
+
+def test_v3_sends_a_multi_row_query_back_once_and_accepts_a_narrow_one(con):
+    model = FakeModel([
+        _call("run_sql", sql=BREAKDOWN),
+        _submit("FOODS_3 has 2 items.", BREAKDOWN),  # 3 rows: sent back with a question
+        _call("run_sql", sql=NARROW),
+        _submit("FOODS_3 has 2 items.", NARROW),     # 1 row: accepted
+    ])
+    result = run_agent("How many items are in FOODS_3?", model, con, variant="v3")
+    check = model.calls[2]["messages"][-1]["results"][0].content
+    assert check.startswith("CHECK:") and "3 rows" in check
+    assert result.submitted and result.final_sql == NARROW and result.steps == 4
+
+
+def test_v3_accepts_the_same_multi_row_query_the_second_time(con):
+    """For a question that really asks for a list, the agent confirms by submitting again."""
+    model = FakeModel([
+        _call("run_sql", sql=BREAKDOWN),
+        _submit("Items per department: ...", BREAKDOWN),
+        _submit("Items per department: ...", BREAKDOWN),
+    ])
+    result = run_agent("How many items does each department have?", model, con, variant="v3")
+    assert result.submitted and result.final_sql == BREAKDOWN and result.steps == 3
+
+
+def test_v3_requires_a_query_unless_the_agent_declines(con):
+    model = FakeModel([
+        _call("run_sql", sql=NARROW),
+        _submit("FOODS_3 has 2 items."),           # no query and not a decline: rejected
+        _submit("FOODS_3 has 2 items.", NARROW),
+    ])
+    result = run_agent("How many items are in FOODS_3?", model, con, variant="v3")
+    assert model.calls[2]["messages"][-1]["results"][0].content.startswith("ERROR")
+    assert result.final_sql == NARROW
+
+    decline = FakeModel([_submit("I can't answer that from this data. There are no returns.")])
+    assert run_agent("How many returns?", decline, con, variant="v3").submitted
+
+
+def test_v2_has_no_hand_in_check(con):
+    """v2 must behave exactly as measured: a multi-row query is accepted at once."""
+    model = FakeModel([_call("run_sql", sql=BREAKDOWN), _submit("2 items.", BREAKDOWN)])
+    result = run_agent("q", model, con, variant="v2")
+    assert result.submitted and result.steps == 2
+
+
+# --- variant v4: `sql` required in the schema, queries compared by parsed form ------
+
+
+def test_v4_tool_schema_requires_sql_and_v3_does_not(con):
+    for variant, required in (("v3", ["answer"]), ("v4", ["answer", "sql"])):
+        model = FakeModel([ModelReply(text="done")])
+        run_agent("q", model, con, variant=variant)
+        submit = model.calls[0]["tools"][-1]
+        assert submit["name"] == "submit_answer"
+        assert submit["parameters"]["required"] == required
+
+
+def test_v4_matches_a_query_that_is_only_formatted_differently(con):
+    """Like the real failure: run as '( SELECT', handed in as '(SELECT'."""
+    ran = "WITH x AS ( SELECT count(*) AS n FROM marts.dim_item ) SELECT n FROM x"
+    handed_in = "with x as (select count(*) as n\n  from marts.dim_item)\nselect n from x;"
+    for variant, accepted in (("v3", False), ("v4", True)):
+        model = FakeModel([_call("run_sql", sql=ran), _submit("4 items.", handed_in), ModelReply(text="4 items.")])
+        assert run_agent("How many items?", model, con, variant=variant).submitted is accepted
+
+
+def test_v4_accepts_a_decline_with_an_empty_query(con):
+    model = FakeModel([_submit("I can't answer that from this data. There are no returns.", "")])
+    result = run_agent("How many returns?", model, con, variant="v4")
+    assert result.submitted and result.final_sql is None
+
+
+def test_v4_uses_prompt_v3():
+    assert "`sql` set to an empty string" in build_system_prompt("v4")
+    assert "`sql` set to an empty string" not in build_system_prompt("v3")

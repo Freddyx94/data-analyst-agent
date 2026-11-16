@@ -85,10 +85,11 @@ def run_baseline(question: str, model: Model, con: duckdb.DuckDBPyConnection) ->
 
 
 def run_agent_setup(
-    question: str, model: Model, con: duckdb.DuckDBPyConnection, tracer: Tracer | None = None
+    question: str, model: Model, con: duckdb.DuckDBPyConnection, tracer: Tracer | None = None,
+    variant: str | None = None,
 ) -> Outcome:
-    """The agent loop, reported in the same shape as the baseline."""
-    result = run_agent(question, model, con, tracer)
+    """The agent loop (in the given variant), reported in the same shape as the baseline."""
+    result = run_agent(question, model, con, tracer, variant=variant)
     return Outcome(
         answer=result.answer,
         final_sql=result.final_sql,
