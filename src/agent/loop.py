@@ -25,6 +25,7 @@ from sqlglot.errors import SqlglotError
 
 from agent.answers import is_decline, row_count
 from agent.config import agent_settings, project_path
+from agent.grounding import ungrounded_numbers
 from agent.llm import Model, ToolResult
 from agent.schema_doc import load_general_notes
 from agent.toolbox import SUBMIT_TOOL, execute_tool, tool_schemas
@@ -46,6 +47,8 @@ class AgentResult:
     sql_queries: list[str] = field(default_factory=list)  # every SQL the agent ran
     final_sql: str | None = None  # the query whose result is the agent's final result
     submitted: bool = False       # True when the agent handed in its result with submit_answer
+    # Numbers in the answer that no query, query result or the question contains (see grounding.py).
+    ungrounded_numbers: list[str] = field(default_factory=list)
     trace_path: Path | None = None
 
 
@@ -150,6 +153,7 @@ def run_agent(
     result = AgentResult(answer="", stopped="max_steps", steps=0, trace_path=tracer.path)
     successful_sql: list[str] = []  # queries that ran without error, in order
     rows_of: dict[str, int | None] = {}  # each of those queries (normalised) -> its number of rows
+    sources: list[str] = [question]      # texts the answer may take numbers from
 
     tracer.log(
         "question",
@@ -216,6 +220,9 @@ def run_agent(
                     if not content.startswith("ERROR"):
                         successful_sql.append(str(call.arguments["sql"]))
                         rows_of[key_of(str(call.arguments["sql"]))] = row_count(content)
+            if call.name == "run_sql":
+                sources.append(str(call.arguments.get("sql", "")))
+            sources.append(content)
             tool_seconds = round(time.monotonic() - started, 3)
             result.seconds += tool_seconds
             tracer.log(
@@ -239,6 +246,9 @@ def run_agent(
         result.answer = f"I could not finish this question within {max_steps} steps."
         result.final_sql = successful_sql[-1] if successful_sql else None
 
+    # Checked in code after the run: it does not change what the model sees.
+    result.ungrounded_numbers = ungrounded_numbers(result.answer, sources)
+
     tracer.log(
         "final",
         answer=result.answer,
@@ -249,5 +259,6 @@ def run_agent(
         cost_usd=result.cost_usd,
         final_sql=result.final_sql,
         submitted=result.submitted,
+        ungrounded_numbers=result.ungrounded_numbers,
     )
     return result

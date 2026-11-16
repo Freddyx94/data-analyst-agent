@@ -46,6 +46,12 @@ def main() -> None:
 
         total_cost += result.cost_usd
         print(f"\nAgent: {result.answer}\n")
+        if result.ungrounded_numbers:
+            # The number check: these numbers are in no query or result of this run.
+            print(
+                "  WARNING: these numbers do not come from a query result in this run: "
+                f"{', '.join(result.ungrounded_numbers)}. Treat them with care.\n"
+            )
         print(
             f"  [{result.steps} steps, {result.input_tokens} tokens in, "
             f"{result.output_tokens} tokens out, ${result.cost_usd:.4f}; "

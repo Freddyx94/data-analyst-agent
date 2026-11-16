@@ -139,7 +139,9 @@ def evaluate(
                     failure_type=failure_type, steps=outcome.steps,
                     input_tokens=outcome.input_tokens, output_tokens=outcome.output_tokens,
                     cost_usd=round(outcome.cost_usd, 6), seconds=round(outcome.seconds, 2),
-                    final_sql=" ".join((outcome.final_sql or "").split()),
+                    # Stored exactly as written: joining the lines would turn a query that
+                    # starts with a "-- comment" line into one long comment.
+                    final_sql=(outcome.final_sql or "").strip(),
                     answer=" ".join(outcome.answer.split()),
                 )
             )

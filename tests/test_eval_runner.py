@@ -197,3 +197,17 @@ def test_summary_reports_mean_and_range_over_runs():
     assert (summary["accuracy_min"], summary["accuracy_max"]) == (0.5, 1.0)
     assert summary["cost_per_question_usd"] == pytest.approx(0.002)
     assert summary["steps_per_question"] == 2
+
+
+def test_final_query_is_stored_with_its_line_breaks(con, tmp_path):
+    """A query starting with a '-- comment' line must still run after it is saved and read back."""
+    from evals.run import save_rows
+    from evals.summary import read_rows
+
+    sql = "-- count the items\nSELECT count(*) FROM marts.dim_item"
+    model = AlwaysSameModel(f"```sql\n{sql}\n```")
+    rows, _, _ = evaluate("baseline", model, "dev", 1, con, budget_usd=1.0, cache_dir=tmp_path / "cache")
+    save_rows(rows, tmp_path / "eval.csv")
+    stored = read_rows(tmp_path / "eval.csv")[0].final_sql
+    assert stored == sql
+    assert con.execute(stored).fetchone()[0] == 4

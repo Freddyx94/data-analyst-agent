@@ -53,7 +53,6 @@ agent-v2,claude-haiku-5-5,dev-21,1,multi_step,no_query,submitted_without_query,y
 agent-v2,claude-haiku-5-5,dev-22,1,multi_step,no_query,submitted_without_query,yes,Handed in a correct answer text without the query (sql was optional in v2).
 agent-v2,claude-haiku-5-5,dev-23,1,multi_step,no_query,submitted_without_query,yes,Handed in a correct answer text without the query (sql was optional in v2).
 agent-v2,claude-haiku-5-5,dev-24,1,ambiguous,wrong_row_count,final_query_not_the_answer,yes,"The text answer states the gold value. The handed-in query returns a wider table (a breakdown or several rows), not only the answer."
-agent-v2,claude-haiku-5-5,dev-25,1,ambiguous,wrong_values,meaning_not_in_gold,other meaning,Read 'last year' as the 12 months up to the end of the data and said so. The gold accepts calendar 2015 or 2016 only.
 agent-v2,claude-haiku-5-5,dev-31,1,data_lookup,wrong_row_count,final_query_not_the_answer,yes,"The text answer states the gold value. The handed-in query returns a wider table (a breakdown or several rows), not only the answer."
 agent-v2,claude-haiku-5-5,dev-35,1,data_lookup,wrong_row_count,final_query_not_the_answer,yes,"The text answer states the gold value. The handed-in query returns a wider table (a breakdown or several rows), not only the answer."
 agent-v2,claude-haiku-5-5,dev-01,2,lookup,wrong_row_count,final_query_not_the_answer,yes,"The text answer states the gold value. The handed-in query returns a wider table (a breakdown or several rows), not only the answer."
@@ -69,6 +68,5 @@ agent-v2,claude-haiku-5-5,dev-23,3,multi_step,wrong_row_count,final_query_not_th
 agent-v2,claude-haiku-5-5,dev-35,3,data_lookup,wrong_row_count,final_query_not_the_answer,yes,"The text answer states the gold value. The handed-in query returns a wider table (a breakdown or several rows), not only the answer."
 agent-v3,claude-haiku-5-5,dev-21,1,multi_step,max_steps,stuck_handing_in,n/a,"Kept calling submit_answer without sql after the error, or with a query that differed only in formatting, until the step limit."
 agent-v3,claude-haiku-5-5,dev-22,1,multi_step,max_steps,stuck_handing_in,n/a,"Kept calling submit_answer without sql after the error, or with a query that differed only in formatting, until the step limit."
-agent-v3,claude-haiku-5-5,dev-25,1,ambiguous,wrong_values,meaning_not_in_gold,other meaning,Read 'last year' as the 12 months up to the end of the data and said so. The gold accepts calendar 2015 or 2016 only.
 agent-v3,claude-haiku-5-5,dev-10,2,join,max_steps,stuck_handing_in,n/a,"Kept calling submit_answer without sql after the error, or with a query that differed only in formatting, until the step limit."
 agent-v4,claude-haiku-5-5,dev-23,1,multi_step,wrong_values,misunderstood_term,no,Computed the average per item per day (10.44%) instead of per day (10.32%).

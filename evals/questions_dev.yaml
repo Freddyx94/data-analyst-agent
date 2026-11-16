@@ -213,9 +213,16 @@
     - SELECT sum(units_sold * sell_price) FROM marts.fct_daily_sales WHERE year(date) = 2015
     - SELECT sum(units_sold) FROM marts.fct_daily_sales WHERE year(date) = 2016
     - SELECT sum(units_sold * sell_price) FROM marts.fct_daily_sales WHERE year(date) = 2016
+    - >
+      SELECT sum(units_sold) FROM marts.fct_daily_sales
+      WHERE date BETWEEN DATE '2015-05-23' AND DATE '2016-05-22'
+    - >
+      SELECT sum(units_sold * sell_price) FROM marts.fct_daily_sales
+      WHERE date BETWEEN DATE '2015-05-23' AND DATE '2016-05-22'
   notes: >
-    Units or revenue. "Last year" is 2015 (the last full year) or 2016 (the last year
-    in the data, which ends in May).
+    Units or revenue. "Last year" is 2015 (the last full year), 2016 (the last year
+    in the data, which ends in May), or the last 12 months of the data (23 May 2015
+    to 22 May 2016; added 2026-11-17, approved by Saheed).
 
 - id: dev-26
   level: ambiguous

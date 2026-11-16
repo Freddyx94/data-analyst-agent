@@ -311,3 +311,11 @@ def test_v4_accepts_a_decline_with_an_empty_query(con):
 def test_v4_uses_prompt_v3():
     assert "`sql` set to an empty string" in build_system_prompt("v4")
     assert "`sql` set to an empty string" not in build_system_prompt("v3")
+
+
+def test_v5_is_v4_with_the_off_topic_rules():
+    v4, v5 = build_system_prompt("v4"), build_system_prompt("v5")
+    assert "only help with questions about this store's sales data" in v5
+    assert "only help with questions about this store's sales data" not in v4
+    added = set(v5.splitlines()) - set(v4.splitlines())
+    assert len(added) == 2 and set(v4.splitlines()) <= set(v5.splitlines())  # only two lines added

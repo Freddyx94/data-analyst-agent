@@ -54,6 +54,8 @@ def format_trace(events: list[dict[str, Any]]) -> str:
                 f"${event.get('cost_usd', 0.0):.6f}"
             )
             lines.append(_indent(event["answer"], "ANSWER: "))
+            if event.get("ungrounded_numbers"):
+                lines.append(f"NUMBER CHECK: not from a query result: {', '.join(event['ungrounded_numbers'])}")
     return "\n".join(lines)
 
 

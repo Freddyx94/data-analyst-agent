@@ -1,109 +1,633 @@
 setup,model,prompt,split,run,question_id,level,correct,failure_type,steps,input_tokens,output_tokens,cost_usd,seconds,final_sql,answer
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-01,lookup,True,,1,3192,54,0.000346,1.07,SELECT COUNT(*) AS item_count FROM marts.dim_item WHERE dept_id = 'FOODS_2';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-02,lookup,True,,1,3203,243,0.000442,1.71,SELECT sell_price FROM marts.fct_daily_sales WHERE item_id = 'FOODS_3_090' AND date = DATE '2016-05-22';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-03,lookup,True,,1,3196,74,0.000357,0.92,"SELECT item_id, launch_date FROM marts.dim_item WHERE item_id = 'FOODS_1_009';",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-04,lookup,True,,1,3192,191,0.000415,1.46,SELECT event_name FROM marts.dim_date WHERE date = DATE '2014-07-04';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-05,aggregation,True,,1,3192,148,0.000393,1.07,SELECT SUM(s.units_sold) AS total_units_sold_2013 FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.year = 2013;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-06,aggregation,True,,1,3191,181,0.00041,1.23,SELECT SUM(f.units_sold * f.sell_price) AS total_revenue_2015 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-07,aggregation,True,,1,3187,63,0.00035,0.91,"SELECT dept_id, COUNT(*) AS item_count FROM marts.dim_item GROUP BY dept_id ORDER BY dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-08,aggregation,True,,1,3191,237,0.000438,1.67,SELECT MAX(sell_price) AS max_sell_price FROM marts.fct_daily_sales;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-09,aggregation,True,,1,3201,161,0.000401,1.27,"SELECT item_id, SUM(units_sold) AS total_units_sold FROM marts.fct_daily_sales GROUP BY item_id ORDER BY total_units_sold DESC LIMIT 5;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-10,join,True,,1,3192,144,0.000391,1.13,"SELECT i.dept_id, SUM(s.units_sold) AS units_sold_2015 FROM marts.fct_daily_sales s JOIN marts.dim_item i ON s.item_id = i.item_id JOIN marts.dim_date d ON s.date = d.date WHERE d.year = 2015 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-11,join,True,,1,3196,252,0.000446,1.63,SELECT SUM(f.units_sold) AS snap_units_sold_2014 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.is_snap = TRUE AND d.year = 2014;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-12,join,True,,1,3196,261,0.00045,1.86,SELECT SUM(s.units_sold) AS total_units_sold FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.event_type = 'Sporting';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-13,join,True,,1,3193,284,0.000461,1.78,"SELECT i.dept_id, SUM(s.units_sold * s.sell_price) AS revenue FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date JOIN marts.dim_item AS i ON s.item_id = i.item_id WHERE d.year = 2012 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-14,join,True,,1,3193,277,0.000458,1.77,"SELECT d.weekday, SUM(s.units_sold) AS total_units FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date GROUP BY d.weekday ORDER BY total_units DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-15,time_window,True,,1,3191,102,0.00037,1.16,SELECT SUM(f.units_sold) AS units_sold_dec_2015 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015 AND d.month = 12;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-16,time_window,True,,1,3198,251,0.000445,1.49,SELECT SUM(units_sold) AS units_sold_last_7_days FROM marts.fct_daily_sales WHERE date > (SELECT MAX(date) FROM marts.fct_daily_sales) - INTERVAL 7 DAY;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-17,time_window,True,,1,3193,189,0.000414,1.3,"SELECT d.month, SUM(s.units_sold) AS total_units_sold FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.year = 2014 GROUP BY d.month ORDER BY d.month;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-18,time_window,True,,1,3203,250,0.000445,1.81,SELECT SUM(s.units_sold * s.sell_price) AS total_revenue FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.year = 2016 AND d.month BETWEEN 1 AND 3;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-19,time_window,True,,1,3198,150,0.000395,2.09,SELECT SUM(units_sold) AS total_units_sold FROM marts.fct_daily_sales WHERE date BETWEEN DATE '2014-12-18' AND DATE '2014-12-24';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-20,multi_step,True,,1,3206,833,0.000737,3.59,"WITH yearly AS ( SELECT i.dept_id, d.year, SUM(s.units_sold) AS units FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date JOIN marts.dim_item i ON s.item_id = i.item_id WHERE d.year IN (2014, 2015) GROUP BY i.dept_id, d.year ) SELECT y15.dept_id, y14.units AS units_2014, y15.units AS units_2015, 100.0 * (y15.units - y14.units) / y14.units AS growth_pct FROM yearly y15 JOIN yearly y14 ON y15.dept_id = y14.dept_id AND y14.year = 2014 WHERE y15.year = 2015 ORDER BY growth_pct DESC NULLS LAST LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-21,multi_step,True,,1,3198,529,0.000584,2.52,"SELECT i.dept_id, SUM(s.units_sold) AS units_sold, ROUND(100.0 * SUM(s.units_sold) / SUM(SUM(s.units_sold)) OVER (), 2) AS pct_of_units FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date JOIN marts.dim_item i ON s.item_id = i.item_id WHERE d.year = 2015 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-22,multi_step,True,,1,3212,1014,0.000828,4.15,"SELECT s.item_id, SUM(CASE WHEN EXTRACT(year FROM s.date) = 2014 THEN s.units_sold ELSE 0 END) AS units_2014, SUM(CASE WHEN EXTRACT(year FROM s.date) = 2015 THEN s.units_sold ELSE 0 END) AS units_2015, SUM(CASE WHEN EXTRACT(year FROM s.date) = 2015 THEN s.units_sold ELSE 0 END) - SUM(CASE WHEN EXTRACT(year FROM s.date) = 2014 THEN s.units_sold ELSE 0 END) AS increase_units FROM marts.fct_daily_sales s JOIN marts.dim_item i ON i.item_id = s.item_id WHERE i.launch_date < DATE '2014-01-01' AND s.date >= DATE '2014-01-01' AND s.date < DATE '2016-01-01' GROUP BY s.item_id ORDER BY increase_units DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-23,multi_step,False,wrong_values,1,3222,631,0.000638,3.04,SELECT (AVG(CASE WHEN d.is_snap THEN f.units_sold END) / AVG(CASE WHEN NOT d.is_snap THEN f.units_sold END) - 1) * 100 AS snap_uplift_pct FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015 AND NOT d.is_store_closed;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-24,ambiguous,True,,1,3188,402,0.00052,2.38,"SELECT d.year, SUM(s.units_sold * s.sell_price) AS total_revenue_usd FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date GROUP BY d.year ORDER BY total_revenue_usd DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-25,ambiguous,True,,1,3188,453,0.000545,2.53,"SELECT ROUND(SUM(f.units_sold * f.sell_price), 2) AS revenue_usd FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-26,ambiguous,True,,1,3188,417,0.000527,2.41,"SELECT AVG(item_avg_price) AS avg_item_price_usd FROM ( SELECT item_id, AVG(sell_price) AS item_avg_price FROM marts.fct_daily_sales GROUP BY item_id ) AS per_item;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-01,lookup,True,,1,3192,54,0.000346,1.07,"SELECT COUNT(*) AS item_count
+FROM marts.dim_item
+WHERE dept_id = 'FOODS_2';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-02,lookup,True,,1,3203,243,0.000442,1.71,"SELECT sell_price
+FROM marts.fct_daily_sales
+WHERE item_id = 'FOODS_3_090'
+  AND date = DATE '2016-05-22';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-03,lookup,True,,1,3196,74,0.000357,0.92,"SELECT item_id, launch_date
+FROM marts.dim_item
+WHERE item_id = 'FOODS_1_009';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-04,lookup,True,,1,3192,191,0.000415,1.46,"SELECT event_name
+FROM marts.dim_date
+WHERE date = DATE '2014-07-04';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-05,aggregation,True,,1,3192,148,0.000393,1.07,"SELECT SUM(s.units_sold) AS total_units_sold_2013
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.year = 2013;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-06,aggregation,True,,1,3191,181,0.00041,1.23,"SELECT SUM(f.units_sold * f.sell_price) AS total_revenue_2015
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-07,aggregation,True,,1,3187,63,0.00035,0.91,"SELECT dept_id, COUNT(*) AS item_count
+FROM marts.dim_item
+GROUP BY dept_id
+ORDER BY dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-08,aggregation,True,,1,3191,237,0.000438,1.67,"SELECT MAX(sell_price) AS max_sell_price
+FROM marts.fct_daily_sales;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-09,aggregation,True,,1,3201,161,0.000401,1.27,"SELECT
+    item_id,
+    SUM(units_sold) AS total_units_sold
+FROM marts.fct_daily_sales
+GROUP BY item_id
+ORDER BY total_units_sold DESC
+LIMIT 5;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-10,join,True,,1,3192,144,0.000391,1.13,"SELECT i.dept_id,
+       SUM(s.units_sold) AS units_sold_2015
+FROM marts.fct_daily_sales s
+JOIN marts.dim_item i ON s.item_id = i.item_id
+JOIN marts.dim_date d ON s.date = d.date
+WHERE d.year = 2015
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-11,join,True,,1,3196,252,0.000446,1.63,"SELECT SUM(f.units_sold) AS snap_units_sold_2014
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.is_snap = TRUE
+  AND d.year = 2014;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-12,join,True,,1,3196,261,0.00045,1.86,"SELECT SUM(s.units_sold) AS total_units_sold
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.event_type = 'Sporting';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-13,join,True,,1,3193,284,0.000461,1.78,"SELECT
+    i.dept_id,
+    SUM(s.units_sold * s.sell_price) AS revenue
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+    ON s.date = d.date
+JOIN marts.dim_item AS i
+    ON s.item_id = i.item_id
+WHERE d.year = 2012
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-14,join,True,,1,3193,277,0.000458,1.77,"SELECT d.weekday, SUM(s.units_sold) AS total_units
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d ON s.date = d.date
+GROUP BY d.weekday
+ORDER BY total_units DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-15,time_window,True,,1,3191,102,0.00037,1.16,"SELECT SUM(f.units_sold) AS units_sold_dec_2015
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.year = 2015
+  AND d.month = 12;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-16,time_window,True,,1,3198,251,0.000445,1.49,"SELECT SUM(units_sold) AS units_sold_last_7_days
+FROM marts.fct_daily_sales
+WHERE date > (SELECT MAX(date) FROM marts.fct_daily_sales) - INTERVAL 7 DAY;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-17,time_window,True,,1,3193,189,0.000414,1.3,"SELECT
+    d.month,
+    SUM(s.units_sold) AS total_units_sold
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+    ON s.date = d.date
+WHERE d.year = 2014
+GROUP BY d.month
+ORDER BY d.month;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-18,time_window,True,,1,3203,250,0.000445,1.81,"SELECT SUM(s.units_sold * s.sell_price) AS total_revenue
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.year = 2016
+  AND d.month BETWEEN 1 AND 3;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-19,time_window,True,,1,3198,150,0.000395,2.09,"SELECT SUM(units_sold) AS total_units_sold
+FROM marts.fct_daily_sales
+WHERE date BETWEEN DATE '2014-12-18' AND DATE '2014-12-24';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-20,multi_step,True,,1,3206,833,0.000737,3.59,"WITH yearly AS (
+  SELECT i.dept_id, d.year, SUM(s.units_sold) AS units
+  FROM marts.fct_daily_sales s
+  JOIN marts.dim_date d ON s.date = d.date
+  JOIN marts.dim_item i ON s.item_id = i.item_id
+  WHERE d.year IN (2014, 2015)
+  GROUP BY i.dept_id, d.year
+)
+SELECT
+  y15.dept_id,
+  y14.units AS units_2014,
+  y15.units AS units_2015,
+  100.0 * (y15.units - y14.units) / y14.units AS growth_pct
+FROM yearly y15
+JOIN yearly y14
+  ON y15.dept_id = y14.dept_id AND y14.year = 2014
+WHERE y15.year = 2015
+ORDER BY growth_pct DESC NULLS LAST
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-21,multi_step,True,,1,3198,529,0.000584,2.52,"SELECT
+    i.dept_id,
+    SUM(s.units_sold) AS units_sold,
+    ROUND(100.0 * SUM(s.units_sold) / SUM(SUM(s.units_sold)) OVER (), 2) AS pct_of_units
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d
+    ON s.date = d.date
+JOIN marts.dim_item i
+    ON s.item_id = i.item_id
+WHERE d.year = 2015
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-22,multi_step,True,,1,3212,1014,0.000828,4.15,"SELECT
+    s.item_id,
+    SUM(CASE WHEN EXTRACT(year FROM s.date) = 2014 THEN s.units_sold ELSE 0 END) AS units_2014,
+    SUM(CASE WHEN EXTRACT(year FROM s.date) = 2015 THEN s.units_sold ELSE 0 END) AS units_2015,
+    SUM(CASE WHEN EXTRACT(year FROM s.date) = 2015 THEN s.units_sold ELSE 0 END)
+      - SUM(CASE WHEN EXTRACT(year FROM s.date) = 2014 THEN s.units_sold ELSE 0 END) AS increase_units
+FROM marts.fct_daily_sales s
+JOIN marts.dim_item i
+  ON i.item_id = s.item_id
+WHERE i.launch_date < DATE '2014-01-01'
+  AND s.date >= DATE '2014-01-01'
+  AND s.date < DATE '2016-01-01'
+GROUP BY s.item_id
+ORDER BY increase_units DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-23,multi_step,False,wrong_values,1,3222,631,0.000638,3.04,"SELECT
+    (AVG(CASE WHEN d.is_snap THEN f.units_sold END)
+     / AVG(CASE WHEN NOT d.is_snap THEN f.units_sold END) - 1) * 100 AS snap_uplift_pct
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+    ON f.date = d.date
+WHERE d.year = 2015
+  AND NOT d.is_store_closed;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-24,ambiguous,True,,1,3188,402,0.00052,2.38,"SELECT
+    d.year,
+    SUM(s.units_sold * s.sell_price) AS total_revenue_usd
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+    ON s.date = d.date
+GROUP BY d.year
+ORDER BY total_revenue_usd DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-25,ambiguous,True,,1,3188,453,0.000545,2.53,"SELECT ROUND(SUM(f.units_sold * f.sell_price), 2) AS revenue_usd
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-26,ambiguous,True,,1,3188,417,0.000527,2.41,"SELECT AVG(item_avg_price) AS avg_item_price_usd
+FROM (
+    SELECT item_id, AVG(sell_price) AS item_avg_price
+    FROM marts.fct_daily_sales
+    GROUP BY item_id
+) AS per_item;",
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-27,unanswerable,True,,1,3195,39,0.000339,0.88,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-28,unanswerable,True,,1,3194,40,0.000339,0.96,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-29,unanswerable,True,,1,3191,41,0.00034,0.98,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-30,unanswerable,True,,1,3190,58,0.000348,1.58,,I can't answer that from this data.
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-31,data_lookup,True,,1,3196,298,0.000469,1.94,SELECT SUM(units_sold) AS units_sold FROM marts.fct_daily_sales WHERE date = DATE '2015-05-10';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-32,data_lookup,True,,1,3210,1158,0.0009,5.0,"WITH bounds AS ( SELECT MIN(CASE WHEN event_name ILIKE '%NBA%Final%Start%' THEN date END) AS start_date, MAX(CASE WHEN event_name ILIKE '%NBA%Final%End%' THEN date END) AS end_date FROM marts.dim_date WHERE year = 2015 ) SELECT b.start_date, b.end_date, SUM(s.units_sold) AS units_sold FROM bounds b JOIN marts.fct_daily_sales s ON s.date BETWEEN b.start_date AND b.end_date GROUP BY b.start_date, b.end_date",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-33,data_lookup,True,,1,3198,509,0.000574,2.4,SELECT SUM(s.units_sold * s.sell_price) AS total_revenue FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date WHERE d.event_name ILIKE '%president%' AND d.year = 2016;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-34,data_lookup,True,,1,3199,630,0.000635,2.91,"SELECT d.date, SUM(f.units_sold) AS units_sold FROM marts.dim_date AS d JOIN marts.fct_daily_sales AS f ON f.date = d.date WHERE d.event_name = 'Ramadan starts' AND d.year = 2014 GROUP BY d.date",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-31,data_lookup,True,,1,3196,298,0.000469,1.94,"SELECT SUM(units_sold) AS units_sold
+FROM marts.fct_daily_sales
+WHERE date = DATE '2015-05-10';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-32,data_lookup,True,,1,3210,1158,0.0009,5.0,"WITH bounds AS (
+    SELECT
+        MIN(CASE WHEN event_name ILIKE '%NBA%Final%Start%' THEN date END) AS start_date,
+        MAX(CASE WHEN event_name ILIKE '%NBA%Final%End%' THEN date END) AS end_date
+    FROM marts.dim_date
+    WHERE year = 2015
+)
+SELECT
+    b.start_date,
+    b.end_date,
+    SUM(s.units_sold) AS units_sold
+FROM bounds b
+JOIN marts.fct_daily_sales s
+    ON s.date BETWEEN b.start_date AND b.end_date
+GROUP BY b.start_date, b.end_date",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-33,data_lookup,True,,1,3198,509,0.000574,2.4,"SELECT SUM(s.units_sold * s.sell_price) AS total_revenue
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d
+  ON s.date = d.date
+WHERE d.event_name ILIKE '%president%'
+  AND d.year = 2016;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-34,data_lookup,True,,1,3199,630,0.000635,2.91,"SELECT d.date,
+       SUM(f.units_sold) AS units_sold
+FROM marts.dim_date AS d
+JOIN marts.fct_daily_sales AS f
+  ON f.date = d.date
+WHERE d.event_name = 'Ramadan starts'
+  AND d.year = 2014
+GROUP BY d.date",
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-35,data_lookup,False,gave_up,1,3192,546,0.000592,3.05,,I can't answer that from this data.
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-36,unanswerable,False,answered_unanswerable,1,3201,110,0.000375,0.88,SELECT SUM(f.units_sold) AS units_sold_2015 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE f.item_id = 'FOODS_1_007' AND d.year = 2015;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-01,lookup,True,,1,3192,54,0.000346,0.89,SELECT COUNT(*) AS item_count FROM marts.dim_item WHERE dept_id = 'FOODS_2';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-02,lookup,True,,1,3203,276,0.000458,1.77,SELECT sell_price FROM marts.fct_daily_sales WHERE item_id = 'FOODS_3_090' AND date = DATE '2016-05-22';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-03,lookup,True,,1,3196,74,0.000357,1.08,"SELECT item_id, launch_date FROM marts.dim_item WHERE item_id = 'FOODS_1_009';",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-04,lookup,True,,1,3192,188,0.000413,1.38,SELECT event_name FROM marts.dim_date WHERE date = DATE '2014-07-04';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-05,aggregation,True,,1,3192,91,0.000365,0.86,SELECT SUM(f.units_sold) AS total_units_sold_2013 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2013;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-06,aggregation,True,,1,3191,166,0.000402,1.19,SELECT SUM(s.units_sold * s.sell_price) AS total_revenue FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.year = 2015;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-07,aggregation,True,,1,3187,63,0.00035,0.96,"SELECT dept_id, COUNT(*) AS item_count FROM marts.dim_item GROUP BY dept_id ORDER BY dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-08,aggregation,True,,1,3191,145,0.000392,1.31,SELECT MAX(sell_price) AS highest_price FROM marts.fct_daily_sales;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-09,aggregation,True,,1,3201,236,0.000438,1.51,"SELECT item_id, SUM(units_sold) AS total_units_sold FROM marts.fct_daily_sales GROUP BY item_id ORDER BY total_units_sold DESC LIMIT 5;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-10,join,True,,1,3192,253,0.000446,1.56,"SELECT i.dept_id, SUM(s.units_sold) AS total_units_sold FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date JOIN marts.dim_item AS i ON s.item_id = i.item_id WHERE d.year = 2015 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-11,join,True,,1,3196,183,0.000411,1.23,SELECT SUM(f.units_sold) AS snap_units_sold_2014 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.is_snap = TRUE AND d.year = 2014;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-12,join,True,,1,3196,242,0.000441,1.45,SELECT SUM(f.units_sold) AS total_units_sold FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.is_event = TRUE AND d.event_type = 'Sporting';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-13,join,True,,1,3193,274,0.000456,1.69,"SELECT i.dept_id, SUM(s.units_sold * s.sell_price) AS revenue FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date JOIN marts.dim_item i ON s.item_id = i.item_id WHERE d.year = 2012 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-14,join,True,,1,3193,279,0.000459,1.62,"SELECT d.weekday, SUM(s.units_sold) AS total_units FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date GROUP BY d.weekday ORDER BY total_units DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-15,time_window,True,,1,3191,102,0.00037,1.14,SELECT SUM(f.units_sold) AS units_sold_dec_2015 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015 AND d.month = 12;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-16,time_window,True,,1,3198,285,0.000462,1.61,SELECT SUM(units_sold) AS units_sold FROM marts.fct_daily_sales WHERE date > (SELECT MAX(date) FROM marts.fct_daily_sales) - INTERVAL 7 DAY,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-17,time_window,True,,1,3193,301,0.00047,1.83,"SELECT d.month, SUM(s.units_sold) AS units_sold FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.year = 2014 GROUP BY d.month ORDER BY d.month;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-18,time_window,True,,1,3203,275,0.000458,2.06,SELECT SUM(f.units_sold * f.sell_price) AS total_revenue FROM marts.fct_daily_sales AS f WHERE f.date >= DATE '2016-01-01' AND f.date < DATE '2016-04-01';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-19,time_window,True,,1,3198,162,0.000401,1.45,SELECT SUM(units_sold) AS total_units_sold FROM marts.fct_daily_sales WHERE date BETWEEN DATE '2014-12-18' AND DATE '2014-12-24';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-20,multi_step,True,,1,3206,913,0.000777,3.82,"SELECT i.dept_id, SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END) AS units_2014, SUM(CASE WHEN d.year = 2015 THEN s.units_sold ELSE 0 END) AS units_2015, 100.0 * ( SUM(CASE WHEN d.year = 2015 THEN s.units_sold ELSE 0 END) - SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END) ) / NULLIF(SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END), 0) AS growth_pct FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date JOIN marts.dim_item i ON s.item_id = i.item_id WHERE d.year IN (2014, 2015) GROUP BY i.dept_id ORDER BY growth_pct DESC NULLS LAST LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-21,multi_step,True,,1,3198,551,0.000595,2.52,"SELECT i.dept_id, ROUND(100.0 * SUM(s.units_sold) / SUM(SUM(s.units_sold)) OVER (), 2) AS pct_of_units_2015 FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date JOIN marts.dim_item AS i ON s.item_id = i.item_id WHERE d.year = 2015 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-22,multi_step,True,,1,3212,684,0.000663,2.83,"WITH yearly AS ( SELECT s.item_id, SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END) AS units_2014, SUM(CASE WHEN d.year = 2015 THEN s.units_sold ELSE 0 END) AS units_2015 FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date JOIN marts.dim_item i ON s.item_id = i.item_id WHERE i.launch_date < DATE '2014-01-01' GROUP BY s.item_id ) SELECT item_id, units_2014, units_2015, units_2015 - units_2014 AS increase FROM yearly ORDER BY increase DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-23,multi_step,False,wrong_values,1,3222,597,0.000621,3.02,SELECT (AVG(CASE WHEN d.is_snap THEN f.units_sold END) / AVG(CASE WHEN NOT d.is_snap THEN f.units_sold END) - 1) * 100 AS snap_day_uplift_pct FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015 AND NOT d.is_store_closed;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-24,ambiguous,True,,1,3188,439,0.000538,2.4,"SELECT d.year, SUM(s.units_sold * s.sell_price) AS total_revenue FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date GROUP BY d.year ORDER BY total_revenue DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-25,ambiguous,True,,1,3188,380,0.000509,2.09,SELECT SUM(f.units_sold * f.sell_price) AS revenue_usd FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-26,ambiguous,True,,1,3188,299,0.000468,2.45,SELECT AVG(sell_price) AS avg_sell_price FROM marts.fct_daily_sales;,
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,1,dev-36,unanswerable,False,answered_unanswerable,1,3201,110,0.000375,0.88,"SELECT SUM(f.units_sold) AS units_sold_2015
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE f.item_id = 'FOODS_1_007'
+  AND d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-01,lookup,True,,1,3192,54,0.000346,0.89,"SELECT COUNT(*) AS item_count
+FROM marts.dim_item
+WHERE dept_id = 'FOODS_2';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-02,lookup,True,,1,3203,276,0.000458,1.77,"SELECT sell_price
+FROM marts.fct_daily_sales
+WHERE item_id = 'FOODS_3_090'
+  AND date = DATE '2016-05-22';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-03,lookup,True,,1,3196,74,0.000357,1.08,"SELECT item_id, launch_date
+FROM marts.dim_item
+WHERE item_id = 'FOODS_1_009';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-04,lookup,True,,1,3192,188,0.000413,1.38,"SELECT event_name
+FROM marts.dim_date
+WHERE date = DATE '2014-07-04';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-05,aggregation,True,,1,3192,91,0.000365,0.86,"SELECT SUM(f.units_sold) AS total_units_sold_2013
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.year = 2013;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-06,aggregation,True,,1,3191,166,0.000402,1.19,"SELECT SUM(s.units_sold * s.sell_price) AS total_revenue
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-07,aggregation,True,,1,3187,63,0.00035,0.96,"SELECT dept_id, COUNT(*) AS item_count
+FROM marts.dim_item
+GROUP BY dept_id
+ORDER BY dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-08,aggregation,True,,1,3191,145,0.000392,1.31,"SELECT MAX(sell_price) AS highest_price
+FROM marts.fct_daily_sales;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-09,aggregation,True,,1,3201,236,0.000438,1.51,"SELECT
+    item_id,
+    SUM(units_sold) AS total_units_sold
+FROM marts.fct_daily_sales
+GROUP BY item_id
+ORDER BY total_units_sold DESC
+LIMIT 5;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-10,join,True,,1,3192,253,0.000446,1.56,"SELECT
+    i.dept_id,
+    SUM(s.units_sold) AS total_units_sold
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+    ON s.date = d.date
+JOIN marts.dim_item AS i
+    ON s.item_id = i.item_id
+WHERE d.year = 2015
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-11,join,True,,1,3196,183,0.000411,1.23,"SELECT SUM(f.units_sold) AS snap_units_sold_2014
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.is_snap = TRUE
+  AND d.year = 2014;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-12,join,True,,1,3196,242,0.000441,1.45,"SELECT SUM(f.units_sold) AS total_units_sold
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.is_event = TRUE
+  AND d.event_type = 'Sporting';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-13,join,True,,1,3193,274,0.000456,1.69,"SELECT
+    i.dept_id,
+    SUM(s.units_sold * s.sell_price) AS revenue
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d
+    ON s.date = d.date
+JOIN marts.dim_item i
+    ON s.item_id = i.item_id
+WHERE d.year = 2012
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-14,join,True,,1,3193,279,0.000459,1.62,"SELECT d.weekday, SUM(s.units_sold) AS total_units
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d ON s.date = d.date
+GROUP BY d.weekday
+ORDER BY total_units DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-15,time_window,True,,1,3191,102,0.00037,1.14,"SELECT SUM(f.units_sold) AS units_sold_dec_2015
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.year = 2015
+  AND d.month = 12;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-16,time_window,True,,1,3198,285,0.000462,1.61,"SELECT SUM(units_sold) AS units_sold
+FROM marts.fct_daily_sales
+WHERE date > (SELECT MAX(date) FROM marts.fct_daily_sales) - INTERVAL 7 DAY",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-17,time_window,True,,1,3193,301,0.00047,1.83,"SELECT d.month,
+       SUM(s.units_sold) AS units_sold
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.year = 2014
+GROUP BY d.month
+ORDER BY d.month;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-18,time_window,True,,1,3203,275,0.000458,2.06,"SELECT SUM(f.units_sold * f.sell_price) AS total_revenue
+FROM marts.fct_daily_sales AS f
+WHERE f.date >= DATE '2016-01-01'
+  AND f.date <  DATE '2016-04-01';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-19,time_window,True,,1,3198,162,0.000401,1.45,"SELECT SUM(units_sold) AS total_units_sold
+FROM marts.fct_daily_sales
+WHERE date BETWEEN DATE '2014-12-18' AND DATE '2014-12-24';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-20,multi_step,True,,1,3206,913,0.000777,3.82,"SELECT
+    i.dept_id,
+    SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END) AS units_2014,
+    SUM(CASE WHEN d.year = 2015 THEN s.units_sold ELSE 0 END) AS units_2015,
+    100.0 * (
+        SUM(CASE WHEN d.year = 2015 THEN s.units_sold ELSE 0 END)
+        - SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END)
+    ) / NULLIF(SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END), 0) AS growth_pct
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d
+    ON s.date = d.date
+JOIN marts.dim_item i
+    ON s.item_id = i.item_id
+WHERE d.year IN (2014, 2015)
+GROUP BY i.dept_id
+ORDER BY growth_pct DESC NULLS LAST
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-21,multi_step,True,,1,3198,551,0.000595,2.52,"SELECT
+    i.dept_id,
+    ROUND(100.0 * SUM(s.units_sold) / SUM(SUM(s.units_sold)) OVER (), 2) AS pct_of_units_2015
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+    ON s.date = d.date
+JOIN marts.dim_item AS i
+    ON s.item_id = i.item_id
+WHERE d.year = 2015
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-22,multi_step,True,,1,3212,684,0.000663,2.83,"WITH yearly AS (
+    SELECT
+        s.item_id,
+        SUM(CASE WHEN d.year = 2014 THEN s.units_sold ELSE 0 END) AS units_2014,
+        SUM(CASE WHEN d.year = 2015 THEN s.units_sold ELSE 0 END) AS units_2015
+    FROM marts.fct_daily_sales s
+    JOIN marts.dim_date d ON s.date = d.date
+    JOIN marts.dim_item i ON s.item_id = i.item_id
+    WHERE i.launch_date < DATE '2014-01-01'
+    GROUP BY s.item_id
+)
+SELECT
+    item_id,
+    units_2014,
+    units_2015,
+    units_2015 - units_2014 AS increase
+FROM yearly
+ORDER BY increase DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-23,multi_step,False,wrong_values,1,3222,597,0.000621,3.02,"SELECT
+    (AVG(CASE WHEN d.is_snap THEN f.units_sold END)
+     / AVG(CASE WHEN NOT d.is_snap THEN f.units_sold END) - 1) * 100 AS snap_day_uplift_pct
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+    ON f.date = d.date
+WHERE d.year = 2015
+  AND NOT d.is_store_closed;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-24,ambiguous,True,,1,3188,439,0.000538,2.4,"SELECT d.year,
+       SUM(s.units_sold * s.sell_price) AS total_revenue
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+GROUP BY d.year
+ORDER BY total_revenue DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-25,ambiguous,True,,1,3188,380,0.000509,2.09,"SELECT SUM(f.units_sold * f.sell_price) AS revenue_usd
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-26,ambiguous,True,,1,3188,299,0.000468,2.45,"SELECT AVG(sell_price) AS avg_sell_price
+FROM marts.fct_daily_sales;",
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-27,unanswerable,True,,1,3195,42,0.00034,1.4,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-28,unanswerable,True,,1,3194,40,0.000339,0.94,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-29,unanswerable,True,,1,3191,46,0.000342,0.98,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-30,unanswerable,True,,1,3190,56,0.000347,1.24,,I can't answer that from this data.
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-31,data_lookup,True,,1,3196,476,0.000558,2.6,SELECT SUM(f.units_sold) AS units_sold FROM marts.fct_daily_sales AS f WHERE f.date = DATE '2015-05-10';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-32,data_lookup,True,,1,3210,1302,0.000972,5.67,"WITH bounds AS ( SELECT MIN(CASE WHEN event_name ILIKE '%nba%final%start%' THEN date END) AS start_date, MAX(CASE WHEN event_name ILIKE '%nba%final%end%' THEN date END) AS end_date FROM marts.dim_date WHERE year = 2015 ) SELECT SUM(s.units_sold) AS units_sold FROM marts.fct_daily_sales AS s JOIN bounds AS b ON s.date BETWEEN b.start_date AND b.end_date;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-33,data_lookup,True,,1,3198,484,0.000562,2.4,SELECT SUM(s.units_sold * s.sell_price) AS total_revenue FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.year = 2016 AND d.event_name ILIKE '%president%';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-34,data_lookup,True,,1,3199,638,0.000639,3.28,"SELECT d.date, SUM(s.units_sold) AS units_sold FROM marts.dim_date AS d JOIN marts.fct_daily_sales AS s ON s.date = d.date WHERE d.event_name ILIKE '%Ramadan starts%' AND d.year = 2014 GROUP BY d.date",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-35,data_lookup,False,wrong_values,1,3192,499,0.000569,2.57,SELECT MIN(date) AS lent_start_2013 FROM marts.dim_date WHERE year = 2013 AND event_name = 'Lent';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-36,unanswerable,False,answered_unanswerable,1,3201,104,0.000372,0.81,SELECT SUM(f.units_sold) AS units_sold_2015 FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date WHERE f.item_id = 'FOODS_1_007' AND d.year = 2015;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-01,lookup,True,,1,3192,54,0.000346,0.82,SELECT COUNT(*) AS item_count FROM marts.dim_item WHERE dept_id = 'FOODS_2';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-02,lookup,True,,1,3203,233,0.000437,1.65,"SELECT f.item_id, f.date, f.sell_price FROM marts.fct_daily_sales AS f WHERE f.item_id = 'FOODS_3_090' AND f.date = DATE '2016-05-22';",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-03,lookup,True,,1,3196,108,0.000374,1.02,"SELECT item_id, launch_date FROM marts.dim_item WHERE item_id = 'FOODS_1_009';",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-04,lookup,True,,1,3192,172,0.000405,1.4,SELECT event_name FROM marts.dim_date WHERE date = DATE '2014-07-04';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-05,aggregation,True,,1,3192,85,0.000362,0.82,SELECT SUM(f.units_sold) AS total_units_sold_2013 FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date WHERE d.year = 2013;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-06,aggregation,True,,1,3191,182,0.00041,1.82,SELECT SUM(f.units_sold * f.sell_price) AS total_revenue FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.year = 2015;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-07,aggregation,True,,1,3187,63,0.00035,0.92,"SELECT dept_id, COUNT(*) AS item_count FROM marts.dim_item GROUP BY dept_id ORDER BY dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-08,aggregation,True,,1,3191,151,0.000395,1.42,SELECT MAX(sell_price) AS highest_price FROM marts.fct_daily_sales;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-09,aggregation,True,,1,3201,211,0.000426,1.6,"SELECT s.item_id, SUM(s.units_sold) AS total_units_sold FROM marts.fct_daily_sales AS s GROUP BY s.item_id ORDER BY total_units_sold DESC LIMIT 5;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-10,join,True,,1,3192,278,0.000458,1.71,"SELECT i.dept_id, SUM(s.units_sold) AS units_sold_2015 FROM marts.fct_daily_sales AS s JOIN marts.dim_item AS i ON s.item_id = i.item_id WHERE s.date >= DATE '2015-01-01' AND s.date < DATE '2016-01-01' GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-11,join,True,,1,3196,177,0.000408,1.17,SELECT SUM(s.units_sold) AS snap_units_sold_2014 FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.is_snap = TRUE AND d.year = 2014;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-12,join,True,,1,3196,268,0.000454,1.84,SELECT SUM(s.units_sold) AS total_units_sold FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.event_type = 'Sporting';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-13,join,True,,1,3193,411,0.000525,2.06,"SELECT i.dept_id, SUM(s.units_sold * s.sell_price) AS revenue FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date JOIN marts.dim_item AS i ON s.item_id = i.item_id WHERE d.year = 2012 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-14,join,True,,1,3193,305,0.000472,1.77,"SELECT d.weekday, SUM(s.units_sold) AS total_units FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date GROUP BY d.weekday ORDER BY total_units DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-15,time_window,True,,1,3191,95,0.000367,0.95,SELECT SUM(s.units_sold) AS units_sold_dec_2015 FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date WHERE d.year = 2015 AND d.month = 12;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-16,time_window,True,,1,3198,287,0.000463,1.52,SELECT SUM(units_sold) AS units_sold_last_7_days FROM marts.fct_daily_sales WHERE date > (SELECT MAX(date) FROM marts.fct_daily_sales) - INTERVAL 7 DAY,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-17,time_window,True,,1,3193,294,0.000466,1.79,"SELECT d.month, SUM(s.units_sold) AS units_sold FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON s.date = d.date WHERE d.year = 2014 GROUP BY d.month ORDER BY d.month;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-18,time_window,True,,1,3203,284,0.000462,1.74,SELECT SUM(s.units_sold * s.sell_price) AS total_revenue FROM marts.fct_daily_sales AS s WHERE s.date >= DATE '2016-01-01' AND s.date < DATE '2016-04-01';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-19,time_window,True,,1,3198,146,0.000393,1.29,SELECT SUM(units_sold) AS total_units_sold FROM marts.fct_daily_sales WHERE date BETWEEN DATE '2014-12-18' AND DATE '2014-12-24';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-20,multi_step,True,,1,3206,862,0.000752,4.19,"WITH dept_year AS ( SELECT i.dept_id, d.year, SUM(f.units_sold) AS units FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date JOIN marts.dim_item i ON f.item_id = i.item_id WHERE d.year IN (2014, 2015) GROUP BY i.dept_id, d.year ) SELECT a.dept_id, 100.0 * (b.units - a.units) / a.units AS growth_pct FROM dept_year a JOIN dept_year b ON a.dept_id = b.dept_id AND a.year = 2014 AND b.year = 2015 ORDER BY growth_pct DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-21,multi_step,True,,1,3198,558,0.000599,3.12,"SELECT i.dept_id, ROUND(100.0 * SUM(s.units_sold) / SUM(SUM(s.units_sold)) OVER (), 2) AS pct_of_units FROM marts.fct_daily_sales s JOIN marts.dim_date d ON s.date = d.date JOIN marts.dim_item i ON s.item_id = i.item_id WHERE d.year = 2015 GROUP BY i.dept_id ORDER BY i.dept_id;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-22,multi_step,True,,1,3212,929,0.000786,3.82,"WITH sales AS ( SELECT f.item_id, d.year, SUM(f.units_sold) AS units FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date JOIN marts.dim_item i ON f.item_id = i.item_id WHERE i.launch_date < DATE '2014-01-01' AND d.year IN (2014, 2015) GROUP BY f.item_id, d.year ), pivoted AS ( SELECT item_id, SUM(CASE WHEN year = 2014 THEN units ELSE 0 END) AS units_2014, SUM(CASE WHEN year = 2015 THEN units ELSE 0 END) AS units_2015 FROM sales GROUP BY item_id ) SELECT item_id, units_2014, units_2015, units_2015 - units_2014 AS increase FROM pivoted ORDER BY increase DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-23,multi_step,False,wrong_values,1,3222,586,0.000615,2.69,SELECT (AVG(CASE WHEN d.is_snap THEN f.units_sold END) / AVG(CASE WHEN NOT d.is_snap THEN f.units_sold END) - 1) * 100 AS snap_pct_higher FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date WHERE d.year = 2015 AND NOT d.is_store_closed;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-24,ambiguous,True,,1,3188,660,0.000649,3.33,"-- Total revenue (units_sold * sell_price) per calendar year. -- 2011 starts on 29 January and 2016 ends on 22 May, so those two years are partial. SELECT d.year, ROUND(SUM(f.units_sold * f.sell_price), 2) AS total_revenue FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date GROUP BY d.year ORDER BY total_revenue DESC LIMIT 1;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-25,ambiguous,True,,1,3188,530,0.000584,2.72,"SELECT ROUND(SUM(s.units_sold * s.sell_price), 2) AS total_sales_usd FROM marts.fct_daily_sales AS s JOIN marts.dim_date AS d ON d.date = s.date WHERE d.year = 2015;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-26,ambiguous,True,,1,3188,343,0.00049,2.32,SELECT AVG(sell_price) AS average_sell_price FROM marts.fct_daily_sales;,
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-31,data_lookup,True,,1,3196,476,0.000558,2.6,"SELECT SUM(f.units_sold) AS units_sold
+FROM marts.fct_daily_sales AS f
+WHERE f.date = DATE '2015-05-10';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-32,data_lookup,True,,1,3210,1302,0.000972,5.67,"WITH bounds AS (
+    SELECT
+        MIN(CASE WHEN event_name ILIKE '%nba%final%start%' THEN date END) AS start_date,
+        MAX(CASE WHEN event_name ILIKE '%nba%final%end%' THEN date END) AS end_date
+    FROM marts.dim_date
+    WHERE year = 2015
+)
+SELECT SUM(s.units_sold) AS units_sold
+FROM marts.fct_daily_sales AS s
+JOIN bounds AS b
+    ON s.date BETWEEN b.start_date AND b.end_date;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-33,data_lookup,True,,1,3198,484,0.000562,2.4,"SELECT SUM(s.units_sold * s.sell_price) AS total_revenue
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.year = 2016
+  AND d.event_name ILIKE '%president%';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-34,data_lookup,True,,1,3199,638,0.000639,3.28,"SELECT d.date,
+       SUM(s.units_sold) AS units_sold
+FROM marts.dim_date AS d
+JOIN marts.fct_daily_sales AS s
+  ON s.date = d.date
+WHERE d.event_name ILIKE '%Ramadan starts%'
+  AND d.year = 2014
+GROUP BY d.date",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-35,data_lookup,False,wrong_values,1,3192,499,0.000569,2.57,"SELECT MIN(date) AS lent_start_2013
+FROM marts.dim_date
+WHERE year = 2013
+  AND event_name = 'Lent';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,2,dev-36,unanswerable,False,answered_unanswerable,1,3201,104,0.000372,0.81,"SELECT SUM(f.units_sold) AS units_sold_2015
+FROM marts.fct_daily_sales f
+JOIN marts.dim_date d ON f.date = d.date
+WHERE f.item_id = 'FOODS_1_007'
+  AND d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-01,lookup,True,,1,3192,54,0.000346,0.82,"SELECT COUNT(*) AS item_count
+FROM marts.dim_item
+WHERE dept_id = 'FOODS_2';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-02,lookup,True,,1,3203,233,0.000437,1.65,"SELECT f.item_id, f.date, f.sell_price
+FROM marts.fct_daily_sales AS f
+WHERE f.item_id = 'FOODS_3_090'
+  AND f.date = DATE '2016-05-22';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-03,lookup,True,,1,3196,108,0.000374,1.02,"SELECT item_id, launch_date
+FROM marts.dim_item
+WHERE item_id = 'FOODS_1_009';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-04,lookup,True,,1,3192,172,0.000405,1.4,"SELECT event_name
+FROM marts.dim_date
+WHERE date = DATE '2014-07-04';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-05,aggregation,True,,1,3192,85,0.000362,0.82,"SELECT SUM(f.units_sold) AS total_units_sold_2013
+FROM marts.fct_daily_sales f
+JOIN marts.dim_date d ON f.date = d.date
+WHERE d.year = 2013;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-06,aggregation,True,,1,3191,182,0.00041,1.82,"SELECT SUM(f.units_sold * f.sell_price) AS total_revenue
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-07,aggregation,True,,1,3187,63,0.00035,0.92,"SELECT dept_id, COUNT(*) AS item_count
+FROM marts.dim_item
+GROUP BY dept_id
+ORDER BY dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-08,aggregation,True,,1,3191,151,0.000395,1.42,"SELECT MAX(sell_price) AS highest_price
+FROM marts.fct_daily_sales;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-09,aggregation,True,,1,3201,211,0.000426,1.6,"SELECT
+    s.item_id,
+    SUM(s.units_sold) AS total_units_sold
+FROM marts.fct_daily_sales AS s
+GROUP BY s.item_id
+ORDER BY total_units_sold DESC
+LIMIT 5;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-10,join,True,,1,3192,278,0.000458,1.71,"SELECT
+    i.dept_id,
+    SUM(s.units_sold) AS units_sold_2015
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_item AS i
+    ON s.item_id = i.item_id
+WHERE s.date >= DATE '2015-01-01'
+  AND s.date < DATE '2016-01-01'
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-11,join,True,,1,3196,177,0.000408,1.17,"SELECT SUM(s.units_sold) AS snap_units_sold_2014
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.is_snap = TRUE
+  AND d.year = 2014;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-12,join,True,,1,3196,268,0.000454,1.84,"SELECT SUM(s.units_sold) AS total_units_sold
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.event_type = 'Sporting';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-13,join,True,,1,3193,411,0.000525,2.06,"SELECT
+    i.dept_id,
+    SUM(s.units_sold * s.sell_price) AS revenue
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+    ON s.date = d.date
+JOIN marts.dim_item AS i
+    ON s.item_id = i.item_id
+WHERE d.year = 2012
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-14,join,True,,1,3193,305,0.000472,1.77,"SELECT d.weekday, SUM(s.units_sold) AS total_units
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d ON s.date = d.date
+GROUP BY d.weekday
+ORDER BY total_units DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-15,time_window,True,,1,3191,95,0.000367,0.95,"SELECT SUM(s.units_sold) AS units_sold_dec_2015
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d ON s.date = d.date
+WHERE d.year = 2015 AND d.month = 12;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-16,time_window,True,,1,3198,287,0.000463,1.52,"SELECT SUM(units_sold) AS units_sold_last_7_days
+FROM marts.fct_daily_sales
+WHERE date > (SELECT MAX(date) FROM marts.fct_daily_sales) - INTERVAL 7 DAY",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-17,time_window,True,,1,3193,294,0.000466,1.79,"SELECT d.month,
+       SUM(s.units_sold) AS units_sold
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON s.date = d.date
+WHERE d.year = 2014
+GROUP BY d.month
+ORDER BY d.month;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-18,time_window,True,,1,3203,284,0.000462,1.74,"SELECT SUM(s.units_sold * s.sell_price) AS total_revenue
+FROM marts.fct_daily_sales AS s
+WHERE s.date >= DATE '2016-01-01'
+  AND s.date < DATE '2016-04-01';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-19,time_window,True,,1,3198,146,0.000393,1.29,"SELECT SUM(units_sold) AS total_units_sold
+FROM marts.fct_daily_sales
+WHERE date BETWEEN DATE '2014-12-18' AND DATE '2014-12-24';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-20,multi_step,True,,1,3206,862,0.000752,4.19,"WITH dept_year AS (
+    SELECT i.dept_id, d.year, SUM(f.units_sold) AS units
+    FROM marts.fct_daily_sales f
+    JOIN marts.dim_date d ON f.date = d.date
+    JOIN marts.dim_item i ON f.item_id = i.item_id
+    WHERE d.year IN (2014, 2015)
+    GROUP BY i.dept_id, d.year
+)
+SELECT a.dept_id,
+       100.0 * (b.units - a.units) / a.units AS growth_pct
+FROM dept_year a
+JOIN dept_year b
+  ON a.dept_id = b.dept_id AND a.year = 2014 AND b.year = 2015
+ORDER BY growth_pct DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-21,multi_step,True,,1,3198,558,0.000599,3.12,"SELECT i.dept_id,
+       ROUND(100.0 * SUM(s.units_sold) / SUM(SUM(s.units_sold)) OVER (), 2) AS pct_of_units
+FROM marts.fct_daily_sales s
+JOIN marts.dim_date d ON s.date = d.date
+JOIN marts.dim_item i ON s.item_id = i.item_id
+WHERE d.year = 2015
+GROUP BY i.dept_id
+ORDER BY i.dept_id;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-22,multi_step,True,,1,3212,929,0.000786,3.82,"WITH sales AS (
+    SELECT f.item_id, d.year, SUM(f.units_sold) AS units
+    FROM marts.fct_daily_sales f
+    JOIN marts.dim_date d ON f.date = d.date
+    JOIN marts.dim_item i ON f.item_id = i.item_id
+    WHERE i.launch_date < DATE '2014-01-01'
+      AND d.year IN (2014, 2015)
+    GROUP BY f.item_id, d.year
+),
+pivoted AS (
+    SELECT item_id,
+           SUM(CASE WHEN year = 2014 THEN units ELSE 0 END) AS units_2014,
+           SUM(CASE WHEN year = 2015 THEN units ELSE 0 END) AS units_2015
+    FROM sales
+    GROUP BY item_id
+)
+SELECT item_id,
+       units_2014,
+       units_2015,
+       units_2015 - units_2014 AS increase
+FROM pivoted
+ORDER BY increase DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-23,multi_step,False,wrong_values,1,3222,586,0.000615,2.69,"SELECT (AVG(CASE WHEN d.is_snap THEN f.units_sold END)
+        / AVG(CASE WHEN NOT d.is_snap THEN f.units_sold END) - 1) * 100 AS snap_pct_higher
+FROM marts.fct_daily_sales f
+JOIN marts.dim_date d ON f.date = d.date
+WHERE d.year = 2015
+  AND NOT d.is_store_closed;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-24,ambiguous,True,,1,3188,660,0.000649,3.33,"-- Total revenue (units_sold * sell_price) per calendar year.
+-- 2011 starts on 29 January and 2016 ends on 22 May, so those two years are partial.
+SELECT
+    d.year,
+    ROUND(SUM(f.units_sold * f.sell_price), 2) AS total_revenue
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+    ON f.date = d.date
+GROUP BY d.year
+ORDER BY total_revenue DESC
+LIMIT 1;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-25,ambiguous,True,,1,3188,530,0.000584,2.72,"SELECT ROUND(SUM(s.units_sold * s.sell_price), 2) AS total_sales_usd
+FROM marts.fct_daily_sales AS s
+JOIN marts.dim_date AS d
+  ON d.date = s.date
+WHERE d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-26,ambiguous,True,,1,3188,343,0.00049,2.32,"SELECT AVG(sell_price) AS average_sell_price
+FROM marts.fct_daily_sales;",
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-27,unanswerable,True,,1,3195,42,0.00034,0.99,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-28,unanswerable,True,,1,3194,39,0.000339,0.8,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-29,unanswerable,True,,1,3191,41,0.00034,1.04,,I can't answer that from this data.
 baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-30,unanswerable,True,,1,3190,59,0.000349,0.94,,I can't answer that from this data.
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-31,data_lookup,True,,1,3196,411,0.000525,2.17,SELECT SUM(f.units_sold) AS units_sold FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE d.event_name ILIKE '%mother%' AND d.year = 2015;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-32,data_lookup,True,,1,3210,915,0.000779,4.07,"WITH bounds AS ( SELECT MIN(date) AS start_date, MAX(date) AS end_date FROM marts.dim_date WHERE year = 2015 AND event_name ILIKE '%NBA%Final%' ) SELECT SUM(s.units_sold) AS units_sold FROM marts.fct_daily_sales s JOIN bounds b ON s.date BETWEEN b.start_date AND b.end_date;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-33,data_lookup,True,,1,3198,513,0.000576,2.51,SELECT SUM(f.units_sold * f.sell_price) AS total_revenue FROM marts.fct_daily_sales f JOIN marts.dim_date d ON f.date = d.date WHERE d.event_name ILIKE '%presidents%' AND d.year = 2016;,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-34,data_lookup,True,,1,3199,592,0.000616,3.14,"SELECT d.date, SUM(s.units_sold) AS units_sold FROM marts.dim_date d JOIN marts.fct_daily_sales s ON s.date = d.date WHERE d.event_name = 'Ramadan starts' AND d.year = 2014 GROUP BY d.date;",
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-35,data_lookup,True,,1,3192,693,0.000666,3.83,SELECT d.date FROM marts.dim_date AS d WHERE d.year = 2013 AND d.event_name = 'LentStart';,
-baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-36,unanswerable,False,answered_unanswerable,1,3201,110,0.000375,1.1,SELECT SUM(f.units_sold) AS units_sold_2015 FROM marts.fct_daily_sales AS f JOIN marts.dim_date AS d ON f.date = d.date WHERE f.item_id = 'FOODS_1_007' AND d.year = 2015;,
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-31,data_lookup,True,,1,3196,411,0.000525,2.17,"SELECT SUM(f.units_sold) AS units_sold
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE d.event_name ILIKE '%mother%'
+  AND d.year = 2015;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-32,data_lookup,True,,1,3210,915,0.000779,4.07,"WITH bounds AS (
+    SELECT MIN(date) AS start_date, MAX(date) AS end_date
+    FROM marts.dim_date
+    WHERE year = 2015 AND event_name ILIKE '%NBA%Final%'
+)
+SELECT SUM(s.units_sold) AS units_sold
+FROM marts.fct_daily_sales s
+JOIN bounds b ON s.date BETWEEN b.start_date AND b.end_date;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-33,data_lookup,True,,1,3198,513,0.000576,2.51,"SELECT SUM(f.units_sold * f.sell_price) AS total_revenue
+FROM marts.fct_daily_sales f
+JOIN marts.dim_date d
+  ON f.date = d.date
+WHERE d.event_name ILIKE '%presidents%'
+  AND d.year = 2016;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-34,data_lookup,True,,1,3199,592,0.000616,3.14,"SELECT d.date, SUM(s.units_sold) AS units_sold
+FROM marts.dim_date d
+JOIN marts.fct_daily_sales s ON s.date = d.date
+WHERE d.event_name = 'Ramadan starts'
+  AND d.year = 2014
+GROUP BY d.date;",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-35,data_lookup,True,,1,3192,693,0.000666,3.83,"SELECT d.date
+FROM marts.dim_date AS d
+WHERE d.year = 2013
+  AND d.event_name = 'LentStart';",
+baseline,claude-haiku-5-5,prompts/baseline_v1.md,dev,3,dev-36,unanswerable,False,answered_unanswerable,1,3201,110,0.000375,1.1,"SELECT SUM(f.units_sold) AS units_sold_2015
+FROM marts.fct_daily_sales AS f
+JOIN marts.dim_date AS d
+  ON f.date = d.date
+WHERE f.item_id = 'FOODS_1_007'
+  AND d.year = 2015;",
