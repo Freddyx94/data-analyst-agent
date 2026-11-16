@@ -4,3 +4,4 @@ sqlglot==30.31.0   # parses SQL so run_sql can check it before running it
 PyYAML==6.0.3      # reads config.yaml
 pytest==9.2.0
 anthropic==2.8.0   # official SDK for the Anthropic API; only used in src/agent/llm.py
+streamlit==1.66.1  # the chat app (Stage 6); also draws the charts
