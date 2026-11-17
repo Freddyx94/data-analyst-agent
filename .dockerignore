@@ -1,0 +1,19 @@
+# Never copied into the image
+.env
+data/
+.cache/
+traces/
+CLAUDE.md
+
+# Not needed in the image
+.git/
+.github/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.DS_Store
+
+# Only for the README
+docs/app.gif

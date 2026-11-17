@@ -1,6 +1,6 @@
 # Findings
 
-Work in progress (Stage 6 is not done). Every number here comes from a file in `results/`.
+Every number here comes from a file in `results/`.
 
 ## Final results (test set)
 
@@ -162,3 +162,14 @@ In a live check on two questions, from step 2 on almost all input was read from 
 
 - A local model (Ollama).
 - The stronger model (`claude-sonnet-5-5`) with the improved agent. Left out to stay within the remaining budget.
+
+## What I would do next
+
+- **Fix the two remaining hand-over problems.** Send the number check's result back to the agent before it finishes ("2.4 is not in any query result: compute it in SQL"), and reword the hand-in check's message so the agent does not mention it to the user. Both are small changes, but each needs a new measurement.
+- **More and harder questions.** 24 test questions cannot separate setups that differ by less than one question. Questions written by people who did not build the agent, and more questions that need a look at the data (stored names, missing items), would test the agent's real advantage.
+- **More databases.** One store, one category and clean tables favour the single prompt, which can see the whole schema at once. A larger schema that does not fit in one prompt is where an agent that explores step by step should earn its cost.
+- **A semantic layer from dbt docs.** `docs/schema.md` is written by hand. The descriptions in the dbt project that built these tables could be turned into it automatically, so the two cannot drift apart.
+- **A user feedback loop.** A thumbs up or down in the app, saved with the trace, would turn real questions into new evaluation cases.
+- **Monitoring.** In use, track per question: cost, steps, time, declines, warnings from the number check, and failed queries. A rise in any of them is the first sign that something changed.
+- **A local model.** The plan included an Ollama model as a free comparison; it was not run.
+
