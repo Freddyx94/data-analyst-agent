@@ -57,7 +57,9 @@ The agent variants v1 to v5 (the measured steps from the first agent to the fina
 
 Walmart M5 data from my earlier project `retail-demand-forecasting`: store CA_1, category FOODS, 1,437 items, daily sales from 2011-01-29 to 2016-05-22, plus a 28-day forecast and the forecast models' accuracy. The data may not be redistributed, so it is not in this repository: the database file goes into `data/forecast.duckdb`.
 
-Tests and CI use a tiny database with the same tables and invented rows, built by `tests/fixtures/make_fixture.py`.
+To run the agent on the real data, build that file with [retail-demand-forecasting](https://github.com/Freddyx94/retail-demand-forecasting); the M5 data itself comes from the Kaggle M5 Forecasting competition. You also need your own Anthropic API key.
+
+**Without the data or a key** you can still run the tests and see the agent loop work: both use a tiny database with the same tables and invented rows (built by `tests/fixtures/make_fixture.py`) and a fake model that replays scripted answers. See `pytest -q` and `python scripts/demo_fake_agent.py` below.
 
 ## How to run
 
